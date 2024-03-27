@@ -1,5 +1,5 @@
 TOPNAME = top
-INC_PATH ?=
+INC_PATH += $(shell pwd)/csrc/include
 
 VERILATOR = verilator
 VERILATOR_CFLAGS += -MMD --build -cc  \
@@ -28,6 +28,12 @@ ifneq ($(strip $(ELF)),)
 	RUNFLAGS += -f $(ELF)
 endif
 
+ifneq ($(strip $(DIFF_NUME_SO)),)
+	CXXFLAGS += -DCONFIG_DIFFTEST
+	CXXFLAGS += -l$(DIFF_NUME_SO)
+	RUNFLAGS += -d $(DIFF_NUME_SO)
+endif
+
 INCFLAGS = $(addprefix -I, $(INC_PATH))
 CXXFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\"" -g
 CXXFLAGS += -DCONFIG_ITRACE
@@ -38,7 +44,7 @@ $(BIN): $(VSRCS) $(CSRCS)
 	$(VERILATOR) $(VERILATOR_CFLAGS) \
 		--top-module $(TOPNAME) $^ \
 		$(addprefix -CFLAGS , $(CXXFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
-		--Mdir $(OBJ_DIR) --exe -o $(abspath $(BIN))
+		$(INCFLAGS) --Mdir $(OBJ_DIR) --exe -o $(abspath $(BIN))
 
 all: default
 

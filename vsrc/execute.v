@@ -5,7 +5,7 @@ module EXU#(DATA_WIDTH = 32)(
     output [DATA_WIDTH-1:0]result,
     output reg[DATA_WIDTH-1:0]upc,
     output reg wen,
-    output wire exit, ZF, OF, CF, jump
+    output wire ZF, OF, CF, jump
 );
 
     reg [3:0] alu_op;
@@ -73,5 +73,5 @@ module EXU#(DATA_WIDTH = 32)(
     end
     Alu_32bit myalu(.a(a), .b(b), .alu_crl(alu_op), .sub(sub), .sign(sign), .result(result), .ZF(ZF), .OF(OF), .CF(CF));
     assign jump = (op==7'b1101111)||(op==7'b1100111);
-    assign exit = (op==7'b1110011) && (func == 3'b0);
+    //assign exit = (op==7'b1110011) && (func == 3'b0);
 endmodule
