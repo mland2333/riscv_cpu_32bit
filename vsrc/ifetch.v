@@ -1,5 +1,3 @@
-import "DPI-C" function int pmem_read(input int raddr);
-
 module IFU(
   input valid,
   input [31:0] pc,

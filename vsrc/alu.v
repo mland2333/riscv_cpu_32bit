@@ -98,18 +98,26 @@ module Shift_32bit(
     input[31:0] a,
     input[4:0] shift_num,
     input[1:0] shift_crl,
-    output[31:0] shift_result
+    output reg[31:0] shift_result
 );
     localparam SLL = 2'b00;
     localparam SRA = 2'b01;
     localparam SRL = 2'b10;
-    wire [31:0] sll_result, sra_result, srl_result;
+    wire signed [31:0] sll_result, sra_result, srl_result;
     assign sll_result = a << shift_num;
     assign sra_result = a >>> shift_num;
-    assign srl_result = a << shift_num;
-    assign shift_result = (shift_crl == SLL)? sll_result :
+    assign srl_result = a >> shift_num;
+    always@(*)begin
+      case(shift_crl)
+        SLL: shift_result = sll_result;
+        SRA: shift_result = sra_result;
+        SRL: shift_result = srl_result;
+        default: shift_result = a;
+      endcase
+    end
+    /*assign shift_result = (shift_crl == SLL)? sll_result :
                           (shift_crl == SRA)? sra_result :
-                          (shift_crl == SRL)? srl_result : a;
+                          (shift_crl == SRL)? srl_result : a;*/
 endmodule
 
 module Logic_32bit(
@@ -153,11 +161,50 @@ module Alu_32bit(
         case(alu_crl)
             4'b0000:
             begin
-                op_crl = 2'b00;
+                op_crl = ADDER;
+                logic_crl = 0;
+                shift_crl = 0;
             end
+            4'b0001:
+            begin
+              op_crl = LOGIC;
+              logic_crl = 2'b10;
+              shift_crl = 0;
+            end
+            4'b0011:
+            begin
+              op_crl = LOGIC;
+              logic_crl = 2'b00;
+              shift_crl = 0;
+            end
+            4'b0100:begin
+              op_crl = SHIFT;
+              logic_crl = 0;
+              shift_crl = 2'b00;
+            end
+            4'b0101:begin
+              op_crl = SHIFT;
+              logic_crl = 0;
+              shift_crl = 2'b10;
+            end
+            4'b0110:begin
+              op_crl = SHIFT;
+              logic_crl = 0;
+              shift_crl = 2'b01;
+            end
+
+            4'b1000:
+            begin
+              op_crl = CMP;
+              logic_crl = 0;
+              shift_crl = 0;
+            end
+
             default:
             begin
                 op_crl = 2'b00;
+                logic_crl = 0;
+                shift_crl = 0;
             end
         endcase
     end
@@ -166,7 +213,7 @@ module Alu_32bit(
     Logic_32bit Logic(.a(a), .b(b), .logic_crl(logic_crl), .logic_result(logic_result));
     
     wire cmp;
-    assign cmp = sign ? OF ^ adder_result[31] : CF;
+    assign cmp = sign ? OF ^ adder_result[31] : ~CF;
     assign cmp_result = {31'b0, cmp};
 
     always@(*)begin

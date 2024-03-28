@@ -1,10 +1,11 @@
-/*import "DPI-C" function int pmem_read(input int raddr);
+import "DPI-C" function int pmem_read(input int raddr);
 import "DPI-C" function void pmem_write(
   input int waddr, input int wdata, input byte wmask);
 
 module Memory(
-  input[31:0] raddr, waddr,
-  input valid, wen, wmask,
+  input[31:0] raddr, waddr, wdata,
+  input valid, wen, 
+  input [7:0] wmask,
   output reg[31:0] rdata
 );
 always @(*) begin
@@ -19,4 +20,4 @@ always @(*) begin
   end
 end
 
-endmodule*/
+endmodule

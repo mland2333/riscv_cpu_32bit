@@ -37,6 +37,14 @@ module IDU(
             begin
                 i = {{20{inst[31]}}, inst[31:25], inst[11:7]};
             end
+            7'b1100011: //B
+            begin
+                i = {{19{inst[31]}}, inst[31], inst[7], inst[30:25], inst[11:8], 1'b0};
+            end
+            7'b0110011: //R
+            begin
+                i = {25'b0, inst[31:25]};
+              end
             default:
             begin
                 i = 32'b0;
