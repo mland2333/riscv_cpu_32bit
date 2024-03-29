@@ -103,7 +103,7 @@ module Shift_32bit(
     localparam SLL = 2'b00;
     localparam SRA = 2'b01;
     localparam SRL = 2'b10;
-    wire signed [31:0] sll_result, sra_result, srl_result;
+    wire [31:0] sll_result, sra_result, srl_result;
     assign sll_result = a << shift_num;
     assign sra_result = a >>> shift_num;
     assign srl_result = a >> shift_num;

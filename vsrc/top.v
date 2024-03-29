@@ -5,7 +5,7 @@ module top #(DATA_WIDTH = 32)(
     output [31:0] result,
     output reg exit
 );
-    wire wen, jump;
+    wire jump;
     wire [6:0]op;
     wire [2:0]func;
     wire [4:0]rs1, rs2, rd;

@@ -94,6 +94,13 @@ module EXU#(DATA_WIDTH = 32)(
                    sign = 0;
                    sub = 0;
                  end
+                 3'b101:begin       //sra srl
+                   if(imm[5] == 1) alu_op = 4'b0110; //sra
+                   else alu_op = 4'b0101;             //srl
+                   sub = 0;
+                   sign = 0;
+                 end
+
                  3'b111:begin       //and
                    alu_op = 4'b0011;
                    sign = 0;
