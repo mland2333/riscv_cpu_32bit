@@ -6,7 +6,7 @@ void cpu_display(CPU_status* mcpu){
     return;
   }
   for(int i = 0; i<32; i++){
-    printf("x[%d]=0x%x(%d) ", i, mcpu->gpr[i], mcpu->gpr[i]);
+    printf("x[%d]=0x%x ", i, mcpu->gpr[i]);
   }
   printf("\n");
   printf("pc=0x%x\n", mcpu->pc);

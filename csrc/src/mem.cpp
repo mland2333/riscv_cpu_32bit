@@ -20,6 +20,10 @@ inline uint64_t mem_read(void *addr, int len) {
 }
 
 inline void mem_write(void *addr, int len, uint64_t data) {
+  #ifdef CONFIG_MTRACE
+  //int result = (int)mem_read((void*)v_to_p(addr), len);
+    printf("写入地址0x%x, 内容为0x%x, 写入后地址数据\n", addr, (int)data);
+#endif
   switch (len) {
   case 1:
     *(uint8_t *)addr = data;
@@ -40,7 +44,20 @@ inline void mem_write(void *addr, int len, uint64_t data) {
 
 uint64_t vmem_read(uint32_t addr, int len)
 {
-    return mem_read((void*)v_to_p(addr), len);
+    uint64_t result = mem_read((void*)v_to_p(addr), len);
+  #ifdef CONFIG_MTRACE
+    printf("读取地址0x%x, 内容为0x%x\n", addr, (int)result);
+#endif
+    return result;
+}
+
+void vmem_write(uint32_t addr, int len, uint64_t data)
+{
+    mem_write((void*)v_to_p(addr), len, data);
+  //#ifdef CONFIG_MTRACE
+  //int result = (int)mem_read((void*)v_to_p(addr), len);
+   // printf("写入地址0x%x, 内容为0x%x, 写入后地址数据为:0x%x\n", addr, (int)data, result);
+//#endif
 }
 
 long mem_init(char* img_file) {
@@ -54,17 +71,18 @@ long mem_init(char* img_file) {
     printf("no img_file\n");
     return 20;
   }
+  mem = malloc(CONFIG_MSIZE);
 
   FILE *fp = fopen(img_file, "rb");
   // Assert(fp, "Can not open '%s'", img_file);
 
   fseek(fp, 0, SEEK_END);
   long size = ftell(fp);
-  mem = malloc(size);
+  //mem = malloc(size);
   // Log("The image is %s, size = %ld", img_file, size);
 
   fseek(fp, 0, SEEK_SET);
-  int ret = fread((void*)v_to_p(BASE), size, 1, fp);
+  int ret = fread((void*)v_to_p(CONFIG_MBASE), size, 1, fp);
   fclose(fp);
   return size;
 }

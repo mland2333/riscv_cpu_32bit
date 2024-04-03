@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <getopt.h>
 #include <stdio.h>
+#include <assert.h>
 #include "sdb.h"
 #include "mem.h"
 #include "ftrace.h"
@@ -15,6 +16,18 @@ static char *diff_so_file = NULL;
 extern "C" int pmem_read(int raddr) {
   // 总是读取地址为`raddr & ~0x3u`的4字节返回
   return (int)vmem_read(raddr, 4);
+}
+extern "C" void pmem_write(int waddr, int wdata, char wmask) {
+  //vmem_write(waddr, 4, wdata);
+  wmask = wmask & 0x00ff;
+  uint8_t *cdata = (uint8_t*)(&wdata); 
+  for(int i = 0; i<4; i++){
+    if(((1<<i)&wmask) != 0){
+      vmem_write(waddr+i, 1, (uint64_t)(*(cdata+i)));
+    }
+  }  // 总是往地址为`waddr & ~0x3u`的4字节按写掩码`wmask`写入`wdata`
+  // `wmask`中每比特表示`wdata`中1个字节的掩码,
+  // 如`wmask = 0x3`代表只写入最低2个字节, 内存中的其它字节保持不变
 }
 
 void args_init(int argc, char *argv[]) {
@@ -61,6 +74,7 @@ int main(int argc, char* argv[])
     sim_init();
     args_init(argc, argv);
     long img_size = mem_init(img_file);
+    printf("%lx\n", img_size);
     sdb_init();
     init_disasm("riscv32-linux-pc-gnu");
   #ifdef CONFIG_FTRACE
@@ -69,17 +83,22 @@ int main(int argc, char* argv[])
   #endif
   
   reset(2);
+  printf("here\n");
   cpu_update();
   #ifdef CONFIG_DIFFTEST
     void init_difftest(char *ref_so_file, long img_size, int port);
     init_difftest(diff_so_file, img_size, 1234);
   #endif
-  run();
-  #ifdef CONFIG_DIFFTEST
+    //printf("here\n");
+  //const char* args = nullptr;
+  printf("here\n");
+  int result = run();
+  /*#ifdef CONFIG_DIFFTEST
     printf("difftest success\n");
-  #endif
+  #endif*/
   sim_close();
-    return 0;
+  assert(result != -1);
+  return 0;
 }
 
 

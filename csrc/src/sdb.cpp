@@ -76,33 +76,36 @@ int exec_once(){
   //printf("%08x\n", inst);
   printf("0x%x\t0x%08x\t%s\t\n", pc, inst, inst_buf);
 #endif
+  //cpu_display();
 #ifdef CONFIG_FTRACE
   ftrace(inst, pc, top->pc);
 #endif
 #ifdef CONFIG_DIFFTEST
+  printf("result=0x%x\n", top->result);
   cpu_update();
-  void difftest_step();
-  difftest_step();
+  int difftest_step();
+  if(difftest_step()==-1) return -1;
 #endif
   return top->exit;
 }
 
 int cmd_c(char* args) {
+  int i;
   while (1) {
-    if (exec_once() == 1)
-      return 1;
+    if ((i = exec_once()) != 0)
+      return i;
   }
 }
 int cmd_si(char* args) {
   if(args == nullptr){
-    if (exec_once() == 1)
-      return 1;
+    return exec_once();
   }else{
+    int j;
     char *num = strtok(args, " ");
     int n = atoi(num);
     for (int i =0; i<n; i++) {
-      if(exec_once() == 1)
-        return 1;
+      if((j = exec_once()) != 0)
+        return j;
     }
   }
   return 0;
@@ -137,7 +140,7 @@ void sdb_init(){
   sdb_map["x"] = cmd_x;
 }
 
-void run(){
+int run(){
   char args[32];
   char* cmd;
   char* strend;
@@ -150,8 +153,11 @@ void run(){
       cmd = strtok(args, " ");
       char *sdb_args= cmd + strlen(cmd) + 1;
       if(sdb_args >= strend) sdb_args = nullptr;
-      if (sdb_map[cmd](sdb_args) == 1)
-        break;
+      int result = sdb_map[cmd](sdb_args);
+      if (result == 1)
+        return 0;
+      else if(result == -1)
+        return -1;
       std::cout << "<< ";
     }
 }

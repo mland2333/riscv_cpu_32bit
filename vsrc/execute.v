@@ -7,7 +7,14 @@ module EXU#(DATA_WIDTH = 32)(
     output reg reg_wen,
     output wire ZF, OF, CF, jump
 );
-
+    localparam ADD = 4'b0000;
+    localparam XOR = 4'b0001;
+    localparam OR  = 4'b0010;
+    localparam AND = 4'b0011;
+    localparam SLL = 4'b0100;
+    localparam SRL = 4'b0101;
+    localparam SRA = 4'b0110;
+    localparam SET = 4'b1000;
     reg [3:0] alu_op;
     reg sub, sign, branch;
     reg[31:0] a, b, alu_result;
@@ -22,37 +29,46 @@ module EXU#(DATA_WIDTH = 32)(
                 b = imm;
                 case(func)
                     3'b000:begin     //addi
-                        alu_op = 4'b0000;
+                        alu_op = ADD;
                         sub = 0;
                         sign = 0;
                     end
-                    3'b100:begin     //xori
-                        alu_op = 4'b0001;
-                        sub = 0;
+                    3'b010:begin     //slti
+                        alu_op = SET;
+                        sub = 1;
                         sign = 0;
-                    end
+                      end
                     3'b011:begin     //sltiu
-                        alu_op = 4'b1000;
+                        alu_op = SET;
                         sub = 1;
                         sign = 0;
                     end
-                    3'b001:begin     //slli
-                        alu_op = 4'b0100;
+                    3'b100:begin     //xori
+                        alu_op = XOR;
                         sub = 0;
                         sign = 0;
                     end
-                    3'b101:begin     //srai srli
-                        if(imm[10] == 1) alu_op = 4'b0110; //srai
-                        else alu_op = 4'b0101;             //srli
+                    3'b110:begin     //ori
+                        alu_op = OR;
                         sub = 0;
                         sign = 0;
                     end
                     3'b111:begin     //andi
-                        alu_op = 4'b0011;
+                        alu_op = AND;
                         sub = 0;
                         sign = 0;
                     end
-
+                    3'b001:begin     //slli
+                        alu_op = SLL;
+                        sub = 0;
+                        sign = 0;
+                    end
+                    3'b101:begin     //srai srli
+                        if(imm[10] == 1) alu_op = SRA; //srai
+                        else alu_op = SRL;             //srli
+                        sub = 0;
+                        sign = 0;
+                    end
                     default:begin
                         a = src1;
                         b = src2;
@@ -65,7 +81,7 @@ module EXU#(DATA_WIDTH = 32)(
                reg_wen = 1;
                a = src1;
                b = imm;
-               alu_op = 4'b0000;
+               alu_op = ADD;
                sub = 0;
                sign = 0;
             end
@@ -75,39 +91,48 @@ module EXU#(DATA_WIDTH = 32)(
                b = src2;
                case(func)
                  3'b000:begin       // add sub
-                   alu_op = 4'b0000;
+                   alu_op = ADD;
                    sign = 0;
                    sub = imm[5];
                  end
                  3'b001:begin       // sll
-                   alu_op = 4'b0100;
+                   alu_op = SLL;
                    sign = 0;
                    sub = 0;
                  end
+                 3'b010:begin       // slt
+                   alu_op = SET;
+                   sign = 1;
+                   sub = 1;
+                 end
                  3'b011:begin       // sltu
-                   alu_op = 4'b1000;
+                   alu_op = SET;
                    sign = 0;
                    sub = 1;
                  end
                  3'b100:begin       //xor
-                   alu_op = 4'b0001;
+                   alu_op = XOR;
                    sign = 0;
                    sub = 0;
                  end
                  3'b101:begin       //sra srl
-                   if(imm[5] == 1) alu_op = 4'b0110; //sra
-                   else alu_op = 4'b0101;             //srl
+                   if(imm[5] == 1) alu_op = SRA; //sra
+                   else alu_op = SRL;             //srl
                    sub = 0;
                    sign = 0;
                  end
-
+                 3'b110:begin       //or
+                   alu_op = OR;
+                   sign = 0;
+                   sub = 0;
+                 end
                  3'b111:begin       //and
-                   alu_op = 4'b0011;
+                   alu_op = AND;
                    sign = 0;
                    sub = 0;
                  end
                  default:begin
-                   alu_op = 4'b0000;
+                   alu_op = 0;
                    sign = 0;
                    sub = 0;
                  end
@@ -117,7 +142,7 @@ module EXU#(DATA_WIDTH = 32)(
                 reg_wen = 1;
                 a = pc;
                 b = imm;
-                alu_op = 4'b0000;
+                alu_op = ADD;
                 sub = 0;
                 sign = 0; 
             end
@@ -125,7 +150,7 @@ module EXU#(DATA_WIDTH = 32)(
                 reg_wen = 1;
                 a = pc;
                 b = 32'b100;
-                alu_op = 4'b0000;
+                alu_op = ADD;
                 sub = 0;
                 sign = 0;
                 upc = pc + imm;
@@ -134,7 +159,7 @@ module EXU#(DATA_WIDTH = 32)(
                 reg_wen = 1;
                 a = pc;
                 b = 32'b100;
-                alu_op = 4'b0000;
+                alu_op = ADD;
                 sub = 0;
                 sign = 0;
                 upc = (src1 + imm)&~1;
@@ -143,7 +168,7 @@ module EXU#(DATA_WIDTH = 32)(
                 reg_wen = 1;
                 a = 32'b0;
                 b = imm;
-                alu_op = 4'b0000;
+                alu_op = ADD;
                 sub = 0;
                 sign = 0; 
             end
@@ -151,7 +176,7 @@ module EXU#(DATA_WIDTH = 32)(
                 reg_wen = 0;
                 a = src1;
                 b = imm;
-                alu_op = 4'b0000;
+                alu_op = ADD;
                 sub = 0;
                 sign = 0;
                 case(func)
@@ -164,7 +189,7 @@ module EXU#(DATA_WIDTH = 32)(
                 reg_wen = 0;
                 a = src1;
                 b = src2;
-                alu_op = 4'b1000;
+                alu_op = SET;
                 sub = 1;
                 case(func)
                   3'b000: begin sign = 0; branch = (ZF==1); end  //beq

@@ -1,88 +1,4 @@
-/*
-module pg_generate(
-    input[3:0] a, b,
-    output[3:0] p, g
-);
-    assign p = a ^ b;
-    assign g = a & b;
-endmodule
 
-module c_generate(
-	input [3:0]p, g,
-	input cin,
-	output [3:0] cout
-);
-							
-	assign cout[0]=g[0]|cin&p[0];
-	assign cout[1]=g[1]|g[0]&p[1]|cin&p[1]&p[0];
-	assign cout[2]=g[2]|g[1]&p[2]|g[0]&p[2]&p[1]|cin&p[2]&p[1]&p[0];
-	assign cout[3]=g[3]|g[2]&p[3]|g[1]&p[3]&p[2]|g[0]&p[3]&p[2]&p[1]|cin&p[3]&p[2]&p[1]&p[0];
-
-endmodule
-
-module c_generate2bit(
-	input [1:0]p, g,
-	input cin,
-	output [1:0] cout
-);		
-	assign cout[0]=g[0]|cin&p[0];
-	assign cout[1]=g[1]|g[0]&p[1]|cin&p[1]&p[0];
-endmodule
-
-
-module pgm_generate(
-    input[3:0] p, g,
-    output pm, gm
-);
-    assign gm=g[3]|g[2]&p[3]|g[1]&p[3]&p[2]|g[0]&p[3]&p[2]&p[1];
-	assign pm=p[3]&p[2]&p[1]&p[0];
-endmodule
-
-
-module pgmm_generate(
-    input[3:0] pm, gm,
-    output pmm, gmm
-);
-    assign gmm=gm[3]|gm[2]&pm[3]|gm[1]&pm[3]&pm[2]|gm[0]&pm[3]&pm[2]&pm[1];
-	assign pmm=pm[3]&pm[2]&pm[1]&pm[0];
-endmodule
-
-module Adder_32bit(
-    input [31:0]a, b,
-    input cin,
-    output [31:0]result,
-    output cout, overflow, zero;
-);
-    wire [31:0] p, g, ci;
-    wire [7:0] pm, gm, cm;
-    wire [1:0] pmm, gmm;
-    wire [2:0] cmm;
-    assign cmm[0] = cin;
-    generate
-        genvar i;
-        for(i = 0; i< 8; i++)begin
-            //第一层的进位生成p与进位控制g
-            pg_generate mypg(.a(a[i*4+3: i*4]), .b(b[i*4+3: i*4]), .p(p[i*4+3: i*4]), .g(g[i*4+3: i*4]));
-            //根据第二层cm生成的进位来生成第一层进位，第一层进位与p异或获得result
-            c_generate myc(.p(p[i*4+3: i*4]), .g(g[i*4+3: i*4]), .cin(cm[i]), .cout(ci[i*4+3: i*4]));
-            //第二层的进位生成pm与进位控制gm
-            pgm_generate mypgm(.p(p[i*4+3: i*4]), .g(g[i*4+3: i*4]), .pm(pm[i]), .gm(gm[i]));
-        end
-        genvar j;
-        for(j = 0; j < 2; j++)begin
-            //第二层进位cm
-            c_generate mycm(.p(pm[i*4+3: i*4]), .g(gm[i*4+3: i*4]), .cin(cmm[i]), .cout(cm[i*4+3: i*4]])); 
-            //第三层的进位生成pmm与进位控制gmm
-            pgmm_generate mypgmm(.pm(pm[j*4+3: j*4]), .gm([j*4+3: j*4]), .pmm(pmm[j]), .gmm(gmm[j]));
-        end
-    endgenerate
-    c_generate2bit mycm2bit(.p(pmm[1:0]), .g(gmm[1:0]), .cin(cmm[0]), .cout(cmm[2:1]]));
-    assign result = p ^ ci;
-    assign cout = cmm[2];
-    assign zero = ~(| result);
-    assign overflow = a[31] == b[31] && a[31] != result[31];
-endmodule
-*/
 module Adder_32bit(
     input [31:0]a, b,
     input cin,
@@ -95,7 +11,7 @@ module Adder_32bit(
 endmodule
 
 module Shift_32bit(
-    input[31:0] a,
+    input signed[31:0] a,
     input[4:0] shift_num,
     input[1:0] shift_crl,
     output reg[31:0] shift_result
@@ -103,6 +19,7 @@ module Shift_32bit(
     localparam SLL = 2'b00;
     localparam SRA = 2'b01;
     localparam SRL = 2'b10;
+
     wire [31:0] sll_result, sra_result, srl_result;
     assign sll_result = a << shift_num;
     assign sra_result = a >>> shift_num;
@@ -115,9 +32,6 @@ module Shift_32bit(
         default: shift_result = a;
       endcase
     end
-    /*assign shift_result = (shift_crl == SLL)? sll_result :
-                          (shift_crl == SRA)? sra_result :
-                          (shift_crl == SRL)? srl_result : a;*/
 endmodule
 
 module Logic_32bit(
@@ -149,6 +63,15 @@ module Alu_32bit(
     localparam SHIFT = 2'b01;
     localparam LOGIC = 2'b10;
     localparam CMP   = 2'b11;
+
+    localparam ADD = 4'b0000;
+    localparam XOR = 4'b0001;
+    localparam OR  = 4'b0010;
+    localparam AND = 4'b0011;
+    localparam SLL = 4'b0100;
+    localparam SRL = 4'b0101;
+    localparam SRA = 4'b0110;
+    localparam SET = 4'b1000;
     wire[31:0] adder_result, shift_result, logic_result, cmp_result;
     wire[31:0] l, r;
     reg[1:0] shift_crl, logic_crl, op_crl;
@@ -159,47 +82,51 @@ module Alu_32bit(
 
     always@(*)begin
         case(alu_crl)
-            4'b0000:
+            ADD:
             begin
                 op_crl = ADDER;
                 logic_crl = 0;
                 shift_crl = 0;
             end
-            4'b0001:
+            XOR:
             begin
               op_crl = LOGIC;
               logic_crl = 2'b10;
               shift_crl = 0;
             end
-            4'b0011:
+            OR:
+            begin
+              op_crl = LOGIC;
+              logic_crl = 2'b01;
+              shift_crl = 0;
+            end
+            AND:
             begin
               op_crl = LOGIC;
               logic_crl = 2'b00;
               shift_crl = 0;
             end
-            4'b0100:begin
+            SLL:begin
               op_crl = SHIFT;
               logic_crl = 0;
               shift_crl = 2'b00;
             end
-            4'b0101:begin
+            SRL:begin
               op_crl = SHIFT;
               logic_crl = 0;
               shift_crl = 2'b10;
             end
-            4'b0110:begin
+            SRA:begin
               op_crl = SHIFT;
               logic_crl = 0;
               shift_crl = 2'b01;
             end
-
-            4'b1000:
+            SET:
             begin
               op_crl = CMP;
               logic_crl = 0;
               shift_crl = 0;
             end
-
             default:
             begin
                 op_crl = 2'b00;

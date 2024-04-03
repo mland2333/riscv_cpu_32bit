@@ -13,6 +13,7 @@ void (*difftest_regcpy)(void *dut, bool direction) = NULL;
 void (*difftest_exec)(uint64_t n) = NULL;
 void (*difftest_raise_intr)(uint64_t NO) = NULL;
 
+int icount = 0;
 void init_difftest(char *ref_so_file, long img_size, int port)
 {
   if(ref_so_file == nullptr){
@@ -31,30 +32,39 @@ void init_difftest(char *ref_so_file, long img_size, int port)
   void (*difftest_init)(int) = reinterpret_cast<void (*)(int)>(dlsym(handle, "difftest_init"));
 
   difftest_init(port);
-  difftest_memcpy(BASE, (void*)v_to_p(BASE), img_size, DIFFTEST_TO_REF);
+  difftest_memcpy(CONFIG_MBASE, (void*)v_to_p(CONFIG_MBASE), img_size, DIFFTEST_TO_REF);
   difftest_regcpy(&cpu, DIFFTEST_TO_REF);
 }
 
 extern CPU_status cpu;
 int check_regs(CPU_status* ref){
-  for(int i = 0; i<32; i++)
+  for(int i = 0; i<32; i++){
     if(ref->gpr[i] != cpu.gpr[i])
-      return -1;
+       return i; 
+  }
+    
   if(ref->pc != cpu.pc)
     return -1;
   return 0;
 }
 
 
-void difftest_step(){
+int difftest_step(){
   difftest_exec(1);
+  icount ++;
+  int i;
   difftest_regcpy(&ref_cpu, DIFFTEST_TO_DUT);
-  if(check_regs(&ref_cpu) != 0){
-    printf("difftest失败,地址：0x%x\n", cpu.pc);
+  //cpu_display(&ref_cpu);
+  //cpu_display(&cpu);
+  //printf("第%d条指令\n", icount);
+  if((i = check_regs(&ref_cpu)) != 0){
+    printf("difftest失败, 执行了%d条指令, 寄存器为：x[%d], 地址：0x%x\ncpu.gpr[i] = 0x%x\nref_gpr[i] = 0x%x\n",
+           icount, i, cpu.pc, cpu.gpr[i], ref_cpu.gpr[i]);
     cpu_display(&ref_cpu);
     cpu_display(&cpu);
-    exit(0);
+    return -1;
   }
+  return 0;
 }
 
 #endif
