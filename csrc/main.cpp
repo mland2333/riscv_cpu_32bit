@@ -1,10 +1,13 @@
 #include <cstdlib>
+#include <chrono>
 #include <getopt.h>
 #include <stdio.h>
 #include <assert.h>
 #include "sdb.h"
 #include "mem.h"
+#include "device.h"
 #include "ftrace.h"
+
 #ifdef CONFIG_DIFFTEST
 
 #endif
@@ -12,13 +15,32 @@
 static char *img_file = NULL;
 static char *elf_file = NULL;
 static char *diff_so_file = NULL;
-
+bool mem_wen = false;
+auto time_begin = std::chrono::system_clock::now();
+uint64_t d;
 extern "C" int pmem_read(int raddr) {
+  if(raddr == SERIAL_PORT){
+    return 0;
+  }
+  else if (raddr == RTC_ADDR + 4) {
+    auto now = std::chrono::high_resolution_clock::now();
+    d = (std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch() - time_begin.time_since_epoch())).count();
+    return (int)(d >> 32); 
+  }
+  else if (raddr == RTC_ADDR) {
+    return (int)d;
+  }
   // 总是读取地址为`raddr & ~0x3u`的4字节返回
   return (int)vmem_read(raddr, 4);
 }
 extern "C" void pmem_write(int waddr, int wdata, char wmask) {
+  //printf("pmem访问地址：0x%x\n", waddr);
   //vmem_write(waddr, 4, wdata);
+  if(waddr == SERIAL_PORT){
+    if(mem_wen)
+      putchar(wdata&0xff);
+    return;
+  }
   wmask = wmask & 0x00ff;
   uint8_t *cdata = (uint8_t*)(&wdata); 
   for(int i = 0; i<4; i++){
@@ -74,7 +96,6 @@ int main(int argc, char* argv[])
     sim_init();
     args_init(argc, argv);
     long img_size = mem_init(img_file);
-    printf("%lx\n", img_size);
     sdb_init();
     init_disasm("riscv32-linux-pc-gnu");
   #ifdef CONFIG_FTRACE
@@ -83,7 +104,6 @@ int main(int argc, char* argv[])
   #endif
   
   reset(2);
-  printf("here\n");
   cpu_update();
   #ifdef CONFIG_DIFFTEST
     void init_difftest(char *ref_so_file, long img_size, int port);
@@ -91,7 +111,6 @@ int main(int argc, char* argv[])
   #endif
     //printf("here\n");
   //const char* args = nullptr;
-  printf("here\n");
   int result = run();
   /*#ifdef CONFIG_DIFFTEST
     printf("difftest success\n");

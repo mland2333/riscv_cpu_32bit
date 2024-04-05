@@ -3,7 +3,7 @@ module top #(DATA_WIDTH = 32)(
     output [DATA_WIDTH-1 : 0] inst,
     output reg[DATA_WIDTH-1 : 0] pc, upc,
     output [31:0] result,
-    output reg exit
+    output reg exit, mem_wen
 );
     wire jump;
     wire [6:0]op;
@@ -18,7 +18,7 @@ module top #(DATA_WIDTH = 32)(
     IFU mifetch(.valid(valid), .pc(pc), .inst(inst));
     RegisterFile #(5, DATA_WIDTH) mreg(.clk(clk),.rdata1(src1),.raddr1(rs1),.rdata2(src2),.raddr2(rs2),.wdata(result),.waddr(rd),.wen(wen)); 
     IDU mdecode(.inst(inst), .op(op), .func(func), .rs1(rs1), .rs2(rs2), .rd(rd), .imm(imm));
-    EXU #(DATA_WIDTH) mexecute(.op(op), .func(func), .src1(src1), .src2(src2), .imm(imm), .pc(pc), .result(result), .upc(upc), .reg_wen(wen),.ZF(ZF),.OF(OF),.CF(CF),.jump(jump));
+    EXU #(DATA_WIDTH) mexecute(.op(op), .func(func), .src1(src1), .src2(src2), .imm(imm), .pc(pc), .result(result), .upc(upc), .reg_wen(wen),.ZF(ZF),.OF(OF),.CF(CF),.jump(jump),.mem_wen(mem_wen));
 
     always@(posedge clk)begin
       if((op==7'b1110011) && (func == 3'b0))begin

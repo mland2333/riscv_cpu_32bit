@@ -24,6 +24,7 @@ inline void mem_write(void *addr, int len, uint64_t data) {
   //int result = (int)mem_read((void*)v_to_p(addr), len);
     printf("写入地址0x%x, 内容为0x%x, 写入后地址数据\n", addr, (int)data);
 #endif
+  //printf("mem 访问地址：%p\n", addr);
   switch (len) {
   case 1:
     *(uint8_t *)addr = data;
@@ -53,6 +54,7 @@ uint64_t vmem_read(uint32_t addr, int len)
 
 void vmem_write(uint32_t addr, int len, uint64_t data)
 {
+    //printf("vmem访问地址：0x%x\n", addr);
     mem_write((void*)v_to_p(addr), len, data);
   //#ifdef CONFIG_MTRACE
   //int result = (int)mem_read((void*)v_to_p(addr), len);

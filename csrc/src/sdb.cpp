@@ -63,13 +63,15 @@ void reset(int n) {
   top->rst = 0;
 }
 
-
+extern bool mem_wen;
 int exec_once(){
   
   //top->inst = inst;
+  mem_wen = false;
   top->clk = 0; step_and_dump_wave();
   uint32_t pc = top->pc;              
   uint32_t inst = top->inst;
+  mem_wen = top->mem_wen;
   top->clk = 1; step_and_dump_wave();
 #ifdef CONFIG_ITRACE
   disassemble(inst_buf, 128, (uint64_t)pc, (uint8_t *)(&inst), 4);
@@ -81,7 +83,7 @@ int exec_once(){
   ftrace(inst, pc, top->pc);
 #endif
 #ifdef CONFIG_DIFFTEST
-  printf("result=0x%x\n", top->result);
+  //printf("result=0x%x\n", top->result);
   cpu_update();
   int difftest_step();
   if(difftest_step()==-1) return -1;

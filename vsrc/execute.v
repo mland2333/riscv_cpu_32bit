@@ -5,7 +5,7 @@ module EXU#(DATA_WIDTH = 32)(
     output [DATA_WIDTH-1:0]result,
     output reg[DATA_WIDTH-1:0]upc,
     output reg reg_wen,
-    output wire ZF, OF, CF, jump
+    output wire ZF, OF, CF, jump, mem_wen
 );
     localparam ADD = 4'b0000;
     localparam XOR = 4'b0001;
@@ -20,7 +20,7 @@ module EXU#(DATA_WIDTH = 32)(
     reg[31:0] a, b, alu_result;
     reg[31:0] read_result, rdata;
     reg[7:0] wmask;
-    wire valid, mem_wen;
+    wire valid;
     always@(*)begin
         case(op)
             7'b0010011:begin //I
