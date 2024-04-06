@@ -12,33 +12,70 @@
 
 #endif
 
+
 static char *img_file = NULL;
 static char *elf_file = NULL;
 static char *diff_so_file = NULL;
 bool mem_wen = false;
-auto time_begin = std::chrono::system_clock::now();
 uint64_t d;
-extern "C" int pmem_read(int raddr) {
-  if(raddr == SERIAL_PORT){
-    return 0;
-  }
-  else if (raddr == RTC_ADDR + 4) {
-    auto now = std::chrono::high_resolution_clock::now();
-    d = (std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch() - time_begin.time_since_epoch())).count();
+extern int write_sync;
+extern void* vmem;
+
+extern "C" int pmem_read(int addr) {
+  uint32_t raddr = (uint32_t)addr;
+  if (raddr == RTC_ADDR + 4) {
+    d = get_time();
     return (int)(d >> 32); 
   }
   else if (raddr == RTC_ADDR) {
     return (int)d;
   }
+  else if(raddr == VGACTL_ADDR){
+    return HEIGHT;
+  }
+  else if(raddr == VGACTL_ADDR + 2){
+    return WIDTH;
+  }
+  else if(raddr == VGACTL_ADDR + 4){
+    return write_sync;
+  }
+  else if(raddr >= FB_ADDR && raddr <= FB_ADDR + WIDTH*HEIGHT*4){
+    return ((uint32_t*)vmem)[(raddr-FB_ADDR)/4];
+  }
+  else if (raddr == KBD_ADDR) {
+    //printf("读key\n");
+    return get_key(); 
+  }
+  else if(raddr < CONFIG_MBASE || raddr > CONFIG_MBASE + CONFIG_MSIZE){
+    return 0;
+  }
   // 总是读取地址为`raddr & ~0x3u`的4字节返回
   return (int)vmem_read(raddr, 4);
 }
-extern "C" void pmem_write(int waddr, int wdata, char wmask) {
+
+
+extern "C" void pmem_write(int addr, int wdata, char wmask) {
   //printf("pmem访问地址：0x%x\n", waddr);
   //vmem_write(waddr, 4, wdata);
+  uint32_t waddr = (uint32_t) addr;
   if(waddr == SERIAL_PORT){
     if(mem_wen)
       putchar(wdata&0xff);
+    return;
+  }
+  else if(waddr == VGACTL_ADDR + 4){
+    write_sync = wdata;
+    return;
+  }
+  else if (waddr == KBD_ADDR) {
+    printf("写key\n");
+    if(mem_wen)
+      i8042_data_io_handler();
+    return;
+  }
+  else if(waddr >= FB_ADDR && waddr < FB_ADDR + WIDTH*HEIGHT*4){
+    if(mem_wen)
+      ((uint32_t*)vmem)[(waddr-FB_ADDR)/4] = wdata;
     return;
   }
   wmask = wmask & 0x00ff;
@@ -102,7 +139,8 @@ int main(int argc, char* argv[])
     init_ftrace(elf_file);
     
   #endif
-  
+  init_vga();
+  init_i8042();
   reset(2);
   cpu_update();
   #ifdef CONFIG_DIFFTEST

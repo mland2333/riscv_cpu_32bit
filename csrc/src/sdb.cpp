@@ -9,6 +9,7 @@
 #include "mem.h"
 #include "sdb.h"
 #include "cpu.h"
+#include "device.h"
 #include "ftrace.h"
 VerilatedContext* contextp = NULL;
 VerilatedVcdC* tfp = NULL;
@@ -33,9 +34,9 @@ void sim_init()
     contextp = new VerilatedContext;
     tfp = new VerilatedVcdC;
     top = new Vtop;
-    contextp->traceEverOn(true);
-    top->trace(tfp, 0);
-    tfp->open("dump.vcd");
+    //contextp->traceEverOn(true);
+    //top->trace(tfp, 0);
+    //tfp->open("dump.vcd");
 }
 
 void sim_close()
@@ -48,8 +49,8 @@ void sim_close()
 
 void step_and_dump_wave() {
   top->eval();
-  contextp->timeInc(1);
-  tfp->dump(contextp->time());
+  //contextp->timeInc(1);
+  //tfp->dump(contextp->time());
 }
 void single_cycle() {
   top->clk = 0; step_and_dump_wave();
@@ -73,6 +74,7 @@ int exec_once(){
   uint32_t inst = top->inst;
   mem_wen = top->mem_wen;
   top->clk = 1; step_and_dump_wave();
+  device_updata();
 #ifdef CONFIG_ITRACE
   disassemble(inst_buf, 128, (uint64_t)pc, (uint8_t *)(&inst), 4);
   //printf("%08x\n", inst);
