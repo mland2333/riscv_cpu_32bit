@@ -29,10 +29,16 @@ void device_updata()
       case SDL_KEYUP: {
         uint8_t k = event.key.keysym.scancode;
         bool is_keydown = (event.key.type == SDL_KEYDOWN);
+        //printf("k=%d\n",k);
         send_key(k, is_keydown);
         break;
       }
       default: break;
     }
   }
+}
+
+void sdl_clear_event_queue() {
+  SDL_Event event;
+  while (SDL_PollEvent(&event));
 }

@@ -16,6 +16,8 @@
 static char *img_file = NULL;
 static char *elf_file = NULL;
 static char *diff_so_file = NULL;
+static uint32_t k = 0;
+bool mem_en = false;
 bool mem_wen = false;
 uint64_t d;
 extern int write_sync;
@@ -39,13 +41,19 @@ extern "C" int pmem_read(int addr) {
   else if(raddr == VGACTL_ADDR + 4){
     return write_sync;
   }
+  else if (raddr == KBD_ADDR) {
+    //printf("读key\n");
+    if(mem_en){
+       k = get_key();
+       if(k!=0) printf("key=0x%x\n",k);
+      return k;
+    }
+    return k;
+  }
   else if(raddr >= FB_ADDR && raddr <= FB_ADDR + WIDTH*HEIGHT*4){
     return ((uint32_t*)vmem)[(raddr-FB_ADDR)/4];
   }
-  else if (raddr == KBD_ADDR) {
-    //printf("读key\n");
-    return get_key(); 
-  }
+  
   else if(raddr < CONFIG_MBASE || raddr > CONFIG_MBASE + CONFIG_MSIZE){
     return 0;
   }
@@ -55,9 +63,7 @@ extern "C" int pmem_read(int addr) {
 
 
 extern "C" void pmem_write(int addr, int wdata, char wmask) {
-  //printf("pmem访问地址：0x%x\n", waddr);
-  //vmem_write(waddr, 4, wdata);
-  uint32_t waddr = (uint32_t) addr;
+    uint32_t waddr = (uint32_t) addr;
   if(waddr == SERIAL_PORT){
     if(mem_wen)
       putchar(wdata&0xff);
@@ -68,10 +74,7 @@ extern "C" void pmem_write(int addr, int wdata, char wmask) {
     return;
   }
   else if (waddr == KBD_ADDR) {
-    printf("写key\n");
-    if(mem_wen)
-      i8042_data_io_handler();
-    return;
+        return;
   }
   else if(waddr >= FB_ADDR && waddr < FB_ADDR + WIDTH*HEIGHT*4){
     if(mem_wen)

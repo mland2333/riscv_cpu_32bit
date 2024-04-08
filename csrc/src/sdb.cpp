@@ -64,16 +64,20 @@ void reset(int n) {
   top->rst = 0;
 }
 
+extern bool mem_en;
 extern bool mem_wen;
 int exec_once(){
   
   //top->inst = inst;
+  mem_en = false;
   mem_wen = false;
   top->clk = 0; step_and_dump_wave();
   uint32_t pc = top->pc;              
   uint32_t inst = top->inst;
+  mem_en = true;
   mem_wen = top->mem_wen;
   top->clk = 1; step_and_dump_wave();
+  //mem_en = false;
   device_updata();
 #ifdef CONFIG_ITRACE
   disassemble(inst_buf, 128, (uint64_t)pc, (uint8_t *)(&inst), 4);
@@ -150,6 +154,8 @@ int run(){
   char* strend;
   std::string line;
   top->valid = 1;
+  extern void sdl_clear_event_queue();
+  sdl_clear_event_queue();
   std::cout << "<< ";
     while (getline(std::cin, line)) {
       strcpy(args, line.c_str());
