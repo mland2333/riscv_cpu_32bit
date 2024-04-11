@@ -9,6 +9,7 @@ uint64_t get_time()
   return (std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch() - time_begin.time_since_epoch())).count();
 
 }
+
 void device_updata()
 {
   static uint64_t last = 0;
@@ -18,6 +19,7 @@ void device_updata()
   }
   last = now;
   vga_update_screen();
+#ifdef CONFIG_KEYBOARD
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     switch (event.type) {
@@ -36,6 +38,7 @@ void device_updata()
       default: break;
     }
   }
+#endif
 }
 
 void sdl_clear_event_queue() {

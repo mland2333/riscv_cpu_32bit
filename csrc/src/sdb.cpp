@@ -34,9 +34,9 @@ void sim_init()
     contextp = new VerilatedContext;
     tfp = new VerilatedVcdC;
     top = new Vtop;
-    //contextp->traceEverOn(true);
-    //top->trace(tfp, 0);
-    //tfp->open("dump.vcd");
+    contextp->traceEverOn(true);
+    top->trace(tfp, 0);
+    tfp->open("dump.vcd");
 }
 
 void sim_close()
@@ -49,8 +49,8 @@ void sim_close()
 
 void step_and_dump_wave() {
   top->eval();
-  //contextp->timeInc(1);
-  //tfp->dump(contextp->time());
+  contextp->timeInc(1);
+  tfp->dump(contextp->time());
 }
 void single_cycle() {
   top->clk = 0; step_and_dump_wave();
@@ -64,8 +64,8 @@ void reset(int n) {
   top->rst = 0;
 }
 
-extern bool mem_en;
-extern bool mem_wen;
+bool mem_en = false;
+bool mem_wen = false;
 int exec_once(){
   
   //top->inst = inst;

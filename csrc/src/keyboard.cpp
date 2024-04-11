@@ -1,3 +1,5 @@
+#ifdef CONFIG_KEYBOARD
+
 #include <assert.h>
 #include <cstdlib>
 #define KEYDOWN_MASK 0x8000
@@ -36,14 +38,12 @@ static int key_f = 0, key_r = 0;
 static void key_enqueue(uint32_t am_scancode) {
   key_queue[key_r] = am_scancode;
   key_r = (key_r + 1) % KEY_QUEUE_LEN;
-  printf("enqueue\n");
   //Assert(key_r != key_f, "key queue overflow!");
 }
 
 static uint32_t key_dequeue() {
   uint32_t key = NPC_KEY_NONE;
   if (key_f != key_r) {
-    printf("dequeue\n");
     key = key_queue[key_f];
     key_f = (key_f + 1) % KEY_QUEUE_LEN;
   }
@@ -54,7 +54,6 @@ void send_key(uint8_t scancode, bool is_keydown) {
   if (keymap[scancode] != NPC_KEY_NONE) {
     
     uint32_t am_scancode = keymap[scancode] | (is_keydown ? KEYDOWN_MASK : 0);
-    //printf("send key0x%x\n",am_scancode);
     key_enqueue(am_scancode);
     
   }
@@ -83,3 +82,5 @@ void init_i8042() {
   //i8042_data_port_base[0] = NPC_KEY_NONE;
   init_keymap();
 }
+
+#endif
