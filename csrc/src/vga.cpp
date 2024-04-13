@@ -1,3 +1,5 @@
+#ifdef CONFIG_DEVICE
+
 #include <cstdint>
 #include <cstring>
 #include <cstdlib>
@@ -81,3 +83,4 @@ void init_vga() {
   init_screen();
   memset(vmem, 0, screen_size());
 }
+#endif

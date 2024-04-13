@@ -17,6 +17,7 @@ static char *img_file = NULL;
 static char *elf_file = NULL;
 static char *diff_so_file = NULL;
 static uint32_t k = 0;
+extern int batch;
 extern bool mem_en;
 extern bool mem_wen;
 uint64_t d;
@@ -25,6 +26,7 @@ extern void* vmem;
 
 extern "C" int pmem_read(int addr) {
   uint32_t raddr = (uint32_t)addr;
+  #ifdef CONFIG_DEVICE
   if (raddr == RTC_ADDR + 4) {
     d = get_time();
     return (int)(d >> 32); 
@@ -60,6 +62,7 @@ extern "C" int pmem_read(int addr) {
   else if(raddr < CONFIG_MBASE || raddr > CONFIG_MBASE + CONFIG_MSIZE){
     return 0;
   }
+  #endif
   // 总是读取地址为`raddr & ~0x3u`的4字节返回
   return (int)vmem_read(raddr, 4);
 }
@@ -67,6 +70,7 @@ extern "C" int pmem_read(int addr) {
 
 extern "C" void pmem_write(int addr, int wdata, char wmask) {
     uint32_t waddr = (uint32_t) addr;
+#ifdef CONFIG_DEVICE
   if(waddr == SERIAL_PORT){
     if(mem_wen)
       putchar(wdata&0xff);
@@ -84,6 +88,7 @@ extern "C" void pmem_write(int addr, int wdata, char wmask) {
       ((uint32_t*)vmem)[(waddr-FB_ADDR)/4] = wdata;
     return;
   }
+#endif
   wmask = wmask & 0x00ff;
   uint8_t *cdata = (uint8_t*)(&wdata); 
   for(int i = 0; i<4; i++){
@@ -108,7 +113,7 @@ void args_init(int argc, char *argv[]) {
   int o;
   while ((o = getopt_long(argc, argv, "-bhl:d:p:f:", table, NULL)) != -1) {
     switch (o) {
-    // case 'b': sdb_set_batch_mode(); break;
+    case 'b': batch = 1; break;
     // case 'p': sscanf(optarg, "%d", &difftest_port); break;
     // case 'l': log_file = optarg; break;
     case 'd': diff_so_file = optarg; break;
@@ -135,26 +140,32 @@ extern void cpu_update();
 extern "C" void init_disasm(const char *triple);
 int main(int argc, char* argv[])
 {
-    //printf("here\n");
-    sim_init();
-    args_init(argc, argv);
-    long img_size = mem_init(img_file);
-    sdb_init();
-    init_disasm("riscv32-linux-pc-gnu");
-  #ifdef CONFIG_FTRACE
-    init_ftrace(elf_file);
-    
-  #endif
+  /*
+  for(int i = 0; i<argc; i++)
+  {
+    printf("%s\n", argv[i]);
+  }*/
+  sim_init();
+  args_init(argc, argv);
+  long img_size = mem_init(img_file);
+  sdb_init();
+  init_disasm("riscv32-linux-pc-gnu");
+#ifdef CONFIG_FTRACE
+  init_ftrace(elf_file);
+#endif
+
+#ifdef CONFIG_DEVICE
   init_vga();
-#ifdef CONFIG_KEYBOARD
+  #ifdef CONFIG_KEYBOARD
   init_i8042();
+  #endif
 #endif
   reset(2);
   cpu_update();
-  #ifdef CONFIG_DIFFTEST
-    void init_difftest(char *ref_so_file, long img_size, int port);
-    init_difftest(diff_so_file, img_size, 1234);
-  #endif
+#ifdef CONFIG_DIFFTEST
+  void init_difftest(char *ref_so_file, long img_size, int port);
+  init_difftest(diff_so_file, img_size, 1234);
+#endif
     //printf("here\n");
   //const char* args = nullptr;
   int result = run();

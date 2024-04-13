@@ -1,3 +1,5 @@
+#ifdef CONFIG_DEVICE
+
 #pragma once
 #include <cstdint>
 
@@ -24,3 +26,5 @@ void send_key(uint8_t, bool);
 void i8042_data_io_handler();
 void init_i8042();
 uint32_t get_key();
+
+#endif

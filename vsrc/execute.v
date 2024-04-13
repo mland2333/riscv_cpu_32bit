@@ -1,11 +1,15 @@
+`include "include.v"
+
 module EXU#(DATA_WIDTH = 32)(
     input [6:0] op,
     input [2:0] func,
-    input [DATA_WIDTH-1:0]src1, src2, imm, pc,
-    output [DATA_WIDTH-1:0]result,
+    input [DATA_WIDTH-1:0]src1, src2, imm, pc, csr_rdata,
+    output reg [DATA_WIDTH-1:0]result, csr_wdata,
     output reg[DATA_WIDTH-1:0]upc,
     output reg reg_wen,
-    output wire ZF, OF, CF, jump, mem_wen
+    output wire ZF, OF, CF, jump, mem_wen, csr_wen,
+    output reg[2:0] csr_ctl,
+    output upc_ctl
 );
     localparam ADD = 4'b0000;
     localparam XOR = 4'b0001;
@@ -16,58 +20,54 @@ module EXU#(DATA_WIDTH = 32)(
     localparam SRA = 4'b0110;
     localparam SET = 4'b1000;
     reg [3:0] alu_op;
-    reg sub, sign, branch;
+    reg sub, sign;
     reg[31:0] a, b, alu_result;
     reg[31:0] read_result, rdata;
     reg[7:0] wmask;
-    wire valid;
+    reg valid;
     always@(*)begin
+        sub = 0;
+        sign = 0;
+        reg_wen = 1;
+        a = src1;
+        b = src2;
+        result = alu_result;
+        csr_wdata = alu_result;
+        csr_wen = 0;
+        mem_wen = 0;
+        valid = 0;
+        jump = 0;
+        upc_ctl = 0;
         case(op)
             7'b0010011:begin //I
-                reg_wen = 1;
-                a = src1;
                 b = imm;
                 case(func)
                     3'b000:begin     //addi
                         alu_op = ADD;
-                        sub = 0;
-                        sign = 0;
                     end
                     3'b010:begin     //slti
                         alu_op = SET;
                         sub = 1;
-                        sign = 0;
                       end
                     3'b011:begin     //sltiu
                         alu_op = SET;
                         sub = 1;
-                        sign = 0;
                     end
                     3'b100:begin     //xori
                         alu_op = XOR;
-                        sub = 0;
-                        sign = 0;
                     end
                     3'b110:begin     //ori
                         alu_op = OR;
-                        sub = 0;
-                        sign = 0;
                     end
                     3'b111:begin     //andi
                         alu_op = AND;
-                        sub = 0;
-                        sign = 0;
                     end
                     3'b001:begin     //slli
                         alu_op = SLL;
-                        sub = 0;
-                        sign = 0;
                     end
                     3'b101:begin     //srai srli
                         if(imm[10] == 1) alu_op = SRA; //srai
                         else alu_op = SRL;             //srli
-                        sub = 0;
-                        sign = 0;
                     end
                     default:begin
                         a = src1;
@@ -78,27 +78,19 @@ module EXU#(DATA_WIDTH = 32)(
 
             end
             7'b0000011:begin //lw, lh, lb, lhu, lbu
-               reg_wen = 1;
-               a = src1;
                b = imm;
+               valid = 1;
                alu_op = ADD;
-               sub = 0;
-               sign = 0;
+               result = read_result;
             end
             7'b0110011:begin  //R
-               reg_wen = 1;
-               a = src1;
-               b = src2;
                case(func)
                  3'b000:begin       // add sub
                    alu_op = ADD;
-                   sign = 0;
                    sub = imm[5];
                  end
                  3'b001:begin       // sll
                    alu_op = SLL;
-                   sign = 0;
-                   sub = 0;
                  end
                  3'b010:begin       // slt
                    alu_op = SET;
@@ -107,78 +99,55 @@ module EXU#(DATA_WIDTH = 32)(
                  end
                  3'b011:begin       // sltu
                    alu_op = SET;
-                   sign = 0;
                    sub = 1;
                  end
                  3'b100:begin       //xor
                    alu_op = XOR;
-                   sign = 0;
-                   sub = 0;
                  end
                  3'b101:begin       //sra srl
                    if(imm[5] == 1) alu_op = SRA; //sra
                    else alu_op = SRL;             //srl
-                   sub = 0;
-                   sign = 0;
                  end
                  3'b110:begin       //or
                    alu_op = OR;
-                   sign = 0;
-                   sub = 0;
                  end
                  3'b111:begin       //and
                    alu_op = AND;
-                   sign = 0;
-                   sub = 0;
                  end
                  default:begin
                    alu_op = 0;
-                   sign = 0;
-                   sub = 0;
                  end
                endcase
              end
             7'b0010111:begin //auipc
-                reg_wen = 1;
                 a = pc;
                 b = imm;
                 alu_op = ADD;
-                sub = 0;
-                sign = 0; 
             end
             7'b1101111:begin //jal
-                reg_wen = 1;
                 a = pc;
                 b = 32'b100;
+                jump = 1;
                 alu_op = ADD;
-                sub = 0;
-                sign = 0;
                 upc = pc + imm;
             end
             7'b1100111:begin //jalr
-                reg_wen = 1;
                 a = pc;
                 b = 32'b100;
+                jump = 1;
                 alu_op = ADD;
-                sub = 0;
-                sign = 0;
                 upc = (src1 + imm)&~1;
             end
             7'b0110111:begin //lui
-                reg_wen = 1;
                 a = 32'b0;
                 b = imm;
                 alu_op = ADD;
-                sub = 0;
-                sign = 0; 
             end
             7'b0100011:begin //sw sh sb
                 reg_wen = 0;
-                a = src1;
                 b = imm;
                 alu_op = ADD;
-                sub = 0;
-                sign = 0;
+                mem_wen = 1;
                 case(func)
                   3'b000: wmask = 8'b00000001;
                   3'b001: wmask = 8'b00000011;
@@ -187,25 +156,53 @@ module EXU#(DATA_WIDTH = 32)(
             end
             7'b1100011:begin  //B
                 reg_wen = 0;
-                a = src1;
-                b = src2;
                 alu_op = SET;
                 sub = 1;
                 case(func)
-                  3'b000: begin sign = 0; branch = (ZF==1); end  //beq
-                  3'b001: begin sign = 0; branch = (ZF==0); end  //bne
-                  3'b100: begin sign = 1; branch = (result[0]==1); end //blt
-                  3'b101: begin sign = 1; branch = (result[0]==0); end //bge
-                  3'b110: begin sign = 0; branch = (result[0]==1); end //bltu
-                  3'b111: begin sign = 0; branch = (result[0]==0); end //bgeu
-                  default: begin sign = 0; branch = 0; end
+                  3'b000: begin sign = 0; jump = (ZF==1); end  //beq
+                  3'b001: begin sign = 0; jump = (ZF==0); end  //bne
+                  3'b100: begin sign = 1; jump = (result[0]==1); end //blt
+                  3'b101: begin sign = 1; jump = (result[0]==0); end //bge
+                  3'b110: begin sign = 0; jump = (result[0]==1); end //bltu
+                  3'b111: begin sign = 0; jump = (result[0]==0); end //bgeu
+                  default: begin sign = 0; jump = 0; end
                 endcase
                 upc = pc + imm;
                 //$display("pc = 0x%x", pc);
                 //$display("upc = 0x%x", upc);
             end
+            7'b1110011:begin
+              result = csr_rdata;
+              case(func)
+                3'b000:begin
+                  if(imm[1]==1) csr_ctl = `MRET;
+                  else if(imm[0]==0) csr_ctl = `ECALL;
+                  else csr_ctl = `EBREAK;
+                  csr_wen = 1;
+                  jump = 1;
+                  upc_ctl = 1;
+                end
+                3'b001:begin
+                  b = 0;
+                  alu_op = ADD;
+                  csr_wen = 1;
+                  csr_ctl = `CSRW;
+                end
+                3'b010:begin
+                  b = csr_rdata;
+                  alu_op = OR;
+                  csr_wen = 1;
+                  csr_ctl = `CSRW;
+                end
+                default:begin
+                  b = 0;
+                  alu_op = 0;
+                  csr_ctl = 0;
+                end
+              endcase
+
+            end
             default:begin
-                branch = 0;
                 wmask = 0;
                 a = src1;
                 b = src2;
@@ -227,10 +224,5 @@ module EXU#(DATA_WIDTH = 32)(
       endcase
     end
 
-    assign result = (op==7'b0000011)? read_result : alu_result;
-
-    assign jump = (op==7'b1101111)||(op==7'b1100111)||(op == 7'b1100011 ) && branch;
-    assign mem_wen = (op == 7'b0100011);
-    assign valid = (op == 7'b0100011) || (op == 7'b0000011);
     //assign exit = (op==7'b1110011) && (func == 3'b0);
 endmodule

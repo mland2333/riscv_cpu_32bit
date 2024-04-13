@@ -10,16 +10,24 @@ module top #(DATA_WIDTH = 32)(
     wire [2:0]func;
     wire [4:0]rs1, rs2, rd;
     wire [31:0] imm;
+    wire [31:0] csr_rdata, csr_wdata;
     wire ZF, OF, CF;
-    wire[DATA_WIDTH-1 : 0] src1, src2; 
+    wire[DATA_WIDTH-1 : 0] src1, src2;
+    wire upc_ctl;
     //wire[DATA_WIDTH-1:0] result;
-    reg wen;
+    reg wen, csr_wen;
+    wire [2:0] csr_ctl;
+    reg[31:0] alu_upc, csr_upc;
     PC #(DATA_WIDTH) mpc(.clk(clk), .rst(rst), .upc(upc), .jump(jump), .pc(pc));
     IFU mifetch(.valid(valid), .pc(pc), .inst(inst));
     RegisterFile #(5, DATA_WIDTH) mreg(.clk(clk),.rdata1(src1),.raddr1(rs1),.rdata2(src2),.raddr2(rs2),.wdata(result),.waddr(rd),.wen(wen)); 
     IDU mdecode(.inst(inst), .op(op), .func(func), .rs1(rs1), .rs2(rs2), .rd(rd), .imm(imm));
-    EXU #(DATA_WIDTH) mexecute(.op(op), .func(func), .src1(src1), .src2(src2), .imm(imm), .pc(pc), .result(result), .upc(upc), .reg_wen(wen),.ZF(ZF),.OF(OF),.CF(CF),.jump(jump),.mem_wen(mem_wen));
-
+    EXU #(DATA_WIDTH) mexecute(.op(op), .func(func), .src1(src1), .src2(src2), .imm(imm), .pc(pc), .csr_rdata(csr_rdata), .result(result), .csr_wdata(csr_wdata), .upc(alu_upc), .reg_wen(wen),.ZF(ZF),.OF(OF),.CF(CF),.jump(jump),.mem_wen(mem_wen), .csr_wen(csr_wen), .csr_ctl(csr_ctl), .upc_ctl(upc_ctl));
+    CSRU mcsr(.clk(clk), .wen(csr_wen), .csr_ctl(csr_ctl), .addr(imm), .wdata(result), .pc(pc), .rdata(csr_rdata), .upc(csr_upc));
+    always@(*)begin
+      if(upc_ctl == 0) upc = alu_upc;
+      else upc = csr_upc;
+    end
     always@(posedge clk)begin
       if((op==7'b1110011) && (func == 3'b0))begin
         exit <= 1;

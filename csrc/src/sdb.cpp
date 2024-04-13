@@ -78,7 +78,9 @@ int exec_once(){
   mem_wen = top->mem_wen;
   top->clk = 1; step_and_dump_wave();
   //mem_en = false;
+  #ifdef CONFIG_DEVICE
   device_updata();
+  #endif
 #ifdef CONFIG_ITRACE
   disassemble(inst_buf, 128, (uint64_t)pc, (uint8_t *)(&inst), 4);
   //printf("%08x\n", inst);
@@ -140,6 +142,7 @@ int cmd_x(char* args){
   return 0;
 }
 
+
 void sdb_init(){
   sdb_map["si"] = cmd_si;
   sdb_map["c"] = cmd_c;
@@ -147,16 +150,26 @@ void sdb_init(){
   sdb_map["q"] = cmd_q;
   sdb_map["x"] = cmd_x;
 }
-
+int batch = 0;
 int run(){
   char args[32];
   char* cmd;
   char* strend;
   std::string line;
   top->valid = 1;
+  #ifdef CONFIG_DEVICE
   extern void sdl_clear_event_queue();
   sdl_clear_event_queue();
-  std::cout << "<< ";
+  #endif
+  if(batch == 1){
+    int result = cmd_c(NULL);
+    if (result == 1)
+        return 0;
+    else if(result == -1)
+        return -1;
+  }
+  else{
+    std::cout << "<< ";
     while (getline(std::cin, line)) {
       strcpy(args, line.c_str());
       strend = args + strlen(args);
@@ -170,4 +183,6 @@ int run(){
         return -1;
       std::cout << "<< ";
     }
+  }
+  
 }

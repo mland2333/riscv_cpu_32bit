@@ -1,3 +1,5 @@
+#ifdef CONFIG_DEVICE
+
 #include <device.h>
 #include <cstdint>
 #include <chrono>
@@ -45,3 +47,5 @@ void sdl_clear_event_queue() {
   SDL_Event event;
   while (SDL_PollEvent(&event));
 }
+
+#endif

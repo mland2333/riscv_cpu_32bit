@@ -1,3 +1,5 @@
+#ifdef CONFIG_DEVICE
+
 #ifdef CONFIG_KEYBOARD
 
 #include <assert.h>
@@ -82,5 +84,7 @@ void init_i8042() {
   //i8042_data_port_base[0] = NPC_KEY_NONE;
   init_keymap();
 }
+
+#endif
 
 #endif

@@ -1,6 +1,7 @@
 TOPNAME = top
 NXDC_FILES = constr/top.nxdc
 INC_PATH += $(NPC_HOME)/csrc/include
+INC_PATH += $(NPC_HOME)/vsrc
 
 VERILATOR = verilator
 VERILATOR_CFLAGS += -MMD --build -cc  \
