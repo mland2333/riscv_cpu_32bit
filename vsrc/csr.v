@@ -6,15 +6,15 @@ module CSRU(
   output reg[31:0] rdata, upc
 );
   localparam MSTATUS = 2'b00;
-  localparam MTEVC = 2'b01;
+  localparam MTVEC = 2'b01;
   localparam MEPC = 2'b10;
   localparam MCAUSE = 2'b11;
-  reg[31:0] csr [2:0];
+  reg[31:0] csr [3:0];
   reg[1:0] addr_map;
   always@(*)begin
     case(addr)
       32'h300: begin addr_map = MSTATUS; end
-      32'h305: begin addr_map = MTEVC; end
+      32'h305: begin addr_map = MTVEC; end
       32'h341: begin addr_map = MEPC; end
       32'h342: begin addr_map = MCAUSE; end
       default: begin addr_map = 2'b00; end
@@ -34,9 +34,10 @@ module CSRU(
   always@(*)begin
     case(csr_ctl)
       `MRET:  begin upc = csr[MEPC]; end
-      `ECALL: begin upc = csr[MTEVC]; end
+      `ECALL: begin upc = csr[MTVEC]; end
       default begin upc = 0; end
     endcase
-    rdata = csr[addr_map];
+    if(addr_map == MSTATUS) rdata = 32'h1800;
+    else rdata = csr[addr_map];
   end
   endmodule

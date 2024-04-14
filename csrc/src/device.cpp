@@ -20,8 +20,10 @@ void device_updata()
     return;
   }
   last = now;
+#ifdef CONFIG_VGA
   vga_update_screen();
-#ifdef CONFIG_KEYBOARD
+#endif
+
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     switch (event.type) {
@@ -29,6 +31,7 @@ void device_updata()
         exit(0);
         break;
       // If a key was pressed
+  #ifdef CONFIG_KEYBOARD
       case SDL_KEYDOWN:
       case SDL_KEYUP: {
         uint8_t k = event.key.keysym.scancode;
@@ -37,10 +40,10 @@ void device_updata()
         send_key(k, is_keydown);
         break;
       }
+  #endif
       default: break;
     }
   }
-#endif
 }
 
 void sdl_clear_event_queue() {

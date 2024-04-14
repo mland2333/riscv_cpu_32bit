@@ -147,6 +147,7 @@ module EXU#(DATA_WIDTH = 32)(
                 reg_wen = 0;
                 b = imm;
                 alu_op = ADD;
+                valid = 1;
                 mem_wen = 1;
                 case(func)
                   3'b000: wmask = 8'b00000001;

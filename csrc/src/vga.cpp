@@ -5,9 +5,6 @@
 #include <cstdlib>
 #include <device.h>
 
-//#define SCREEN_W (MUXDEF(CONFIG_VGA_SIZE_800x600, 800, 400))
-//#define SCREEN_H (MUXDEF(CONFIG_VGA_SIZE_800x600, 600, 300))
-
 static uint32_t screen_width() {
   return WIDTH;
 }
@@ -22,10 +19,7 @@ static uint32_t screen_size() {
 
 void *vmem = NULL;
 int write_sync = 0;
-//static uint32_t *vgactl_port_base = NULL;
 
-/*#ifdef CONFIG_VGA_SHOW_SCREEN
-#ifndef CONFIG_TARGET_AM*/
 #include <SDL2/SDL.h>
 
 static SDL_Renderer *renderer = NULL;
@@ -52,15 +46,6 @@ static inline void update_screen() {
   SDL_RenderCopy(renderer, texture, NULL, NULL);
   SDL_RenderPresent(renderer);
 }
-/*#else
-static void init_screen() {}
-
-static inline void update_screen() {
-  io_write(AM_GPU_FBDRAW, 0, 0, vmem, screen_width(), screen_height(), true);
-}
-#endif
-#endif*/
-
 void vga_update_screen() {
   if(write_sync == 1){
     update_screen();
@@ -70,16 +55,8 @@ void vga_update_screen() {
 }
 
 void init_vga() {
-  //vgactl_port_base = (uint32_t *)malloc(8);
-  //vgactl_port_base[0] = (screen_width() << 16) | screen_height();
-/*#ifdef CONFIG_HAS_PORT_IO
-  add_pio_map ("vgactl", CONFIG_VGA_CTL_PORT, vgactl_port_base, 8, NULL);
-#else
-  add_mmio_map("vgactl", CONFIG_VGA_CTL_MMIO, vgactl_port_base, 8, NULL);
-#endif*/
-
+  
   vmem = malloc(screen_size());
-  //add_mmio_map("vmem", CONFIG_FB_ADDR, vmem, screen_size(), NULL);
   init_screen();
   memset(vmem, 0, screen_size());
 }

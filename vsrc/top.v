@@ -23,13 +23,13 @@ module top #(DATA_WIDTH = 32)(
     RegisterFile #(5, DATA_WIDTH) mreg(.clk(clk),.rdata1(src1),.raddr1(rs1),.rdata2(src2),.raddr2(rs2),.wdata(result),.waddr(rd),.wen(wen)); 
     IDU mdecode(.inst(inst), .op(op), .func(func), .rs1(rs1), .rs2(rs2), .rd(rd), .imm(imm));
     EXU #(DATA_WIDTH) mexecute(.op(op), .func(func), .src1(src1), .src2(src2), .imm(imm), .pc(pc), .csr_rdata(csr_rdata), .result(result), .csr_wdata(csr_wdata), .upc(alu_upc), .reg_wen(wen),.ZF(ZF),.OF(OF),.CF(CF),.jump(jump),.mem_wen(mem_wen), .csr_wen(csr_wen), .csr_ctl(csr_ctl), .upc_ctl(upc_ctl));
-    CSRU mcsr(.clk(clk), .wen(csr_wen), .csr_ctl(csr_ctl), .addr(imm), .wdata(result), .pc(pc), .rdata(csr_rdata), .upc(csr_upc));
+    CSRU mcsr(.clk(clk), .wen(csr_wen), .csr_ctl(csr_ctl), .addr(imm), .wdata(csr_wdata), .pc(pc), .rdata(csr_rdata), .upc(csr_upc));
     always@(*)begin
       if(upc_ctl == 0) upc = alu_upc;
       else upc = csr_upc;
     end
     always@(posedge clk)begin
-      if((op==7'b1110011) && (func == 3'b0))begin
+      if(inst == 32'b00000000000100000000000001110011)begin
         exit <= 1;
       end
       else begin

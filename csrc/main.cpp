@@ -155,10 +155,14 @@ int main(int argc, char* argv[])
 #endif
 
 #ifdef CONFIG_DEVICE
+  #ifdef CONFIG_VGA
   init_vga();
+  #endif
   #ifdef CONFIG_KEYBOARD
   init_i8042();
   #endif
+  extern void sdl_clear_event_queue();
+  sdl_clear_event_queue();
 #endif
   reset(2);
   cpu_update();

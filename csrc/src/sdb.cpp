@@ -66,13 +66,14 @@ void reset(int n) {
 
 bool mem_en = false;
 bool mem_wen = false;
+uint32_t pc;
 int exec_once(){
   
   //top->inst = inst;
   mem_en = false;
   mem_wen = false;
   top->clk = 0; step_and_dump_wave();
-  uint32_t pc = top->pc;              
+  pc = top->pc;              
   uint32_t inst = top->inst;
   mem_en = true;
   mem_wen = top->mem_wen;
