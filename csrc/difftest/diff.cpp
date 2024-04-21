@@ -14,6 +14,8 @@ void (*difftest_exec)(uint64_t n) = NULL;
 void (*difftest_raise_intr)(uint64_t NO) = NULL;
 
 int icount = 0;
+bool npc_is_ref_skip = false;
+
 void init_difftest(char *ref_so_file, long img_size, int port)
 {
   if(ref_so_file == nullptr){
@@ -50,6 +52,14 @@ int check_regs(CPU_status* ref){
 
 
 int difftest_step(){
+  if(npc_is_ref_skip){
+    //cpu.pc += 4;
+    difftest_regcpy(&cpu, DIFFTEST_TO_REF);
+    //cpu.pc -= 4;
+    npc_is_ref_skip = false;
+    printf("cpu.pc = 0x%x\n", cpu.pc);
+    return 0;
+  }
   difftest_exec(1);
   icount ++;
   int i;
@@ -60,8 +70,9 @@ int difftest_step(){
   if((i = check_regs(&ref_cpu)) != 0){
     printf("difftest失败, 执行了%d条指令, 寄存器为：x[%d], 地址：0x%x\ncpu.gpr[i] = 0x%x\nref_gpr[i] = 0x%x\n",
            icount, i, cpu.pc, cpu.gpr[i], ref_cpu.gpr[i]);
-    cpu_display(&ref_cpu);
+    
     cpu_display(&cpu);
+    cpu_display(&ref_cpu);
     return -1;
   }
   return 0;

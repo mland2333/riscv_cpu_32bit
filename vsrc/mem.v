@@ -13,6 +13,7 @@ always @(*) begin
     rdata = pmem_read(raddr);
     if (wen) begin // 有写请求时
       pmem_write(waddr, wdata, wmask);
+      //$display("write\n");
     end
   end
   else begin
@@ -21,3 +22,17 @@ always @(*) begin
 end
 
 endmodule
+
+/*module MemFile #(ADDR_WIDTH = 8, DATA_WIDTH = 32) (
+  input [ADDR_WIDTH-1:0] raddr,
+  input [ADDR_WIDTH-1:0] waddr,
+  input [DATA_WIDTH-1:0] wdata,
+  input wen,
+  output [DATA_WIDTH-1:0] rdata
+);
+  reg [DATA_WIDTH-1:0] mem [2**ADDR_WIDTH-1:0];
+  always @(*) begin
+    mem[waddr] = wdata;
+  end
+  assign rdata = mem[raddr];
+endmodule */

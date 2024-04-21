@@ -24,14 +24,25 @@ uint64_t d;
 extern int write_sync;
 extern void* vmem;
 
+#ifdef CONFIG_DIFFTEST
+extern bool npc_is_ref_skip;
+#endif
+
 extern "C" int pmem_read(int addr) {
   uint32_t raddr = (uint32_t)addr;
   #ifdef CONFIG_DEVICE
+  
   if (raddr == RTC_ADDR + 4) {
+    #ifdef CONFIG_DIFFTEST
+    npc_is_ref_skip = true;
+    #endif
     d = get_time();
     return (int)(d >> 32); 
   }
   else if (raddr == RTC_ADDR) {
+    #ifdef CONFIG_DIFFTEST
+    npc_is_ref_skip = true;
+    #endif
     return (int)d;
   }
   else if(raddr == VGACTL_ADDR){
@@ -62,16 +73,23 @@ extern "C" int pmem_read(int addr) {
   else if(raddr < CONFIG_MBASE || raddr > CONFIG_MBASE + CONFIG_MSIZE){
     return 0;
   }
+  
   #endif
   // 总是读取地址为`raddr & ~0x3u`的4字节返回
+  #ifdef CONFIG_DIFFTEST
+  npc_is_ref_skip = false;
+  #endif
   return (int)vmem_read(raddr, 4);
 }
 
 
 extern "C" void pmem_write(int addr, int wdata, char wmask) {
     uint32_t waddr = (uint32_t) addr;
-#ifdef CONFIG_DEVICE
+#ifdef CONFIG_DEVICE 
   if(waddr == SERIAL_PORT){
+    #ifdef CONFIG_DIFFTEST
+    npc_is_ref_skip = true;
+    #endif
     if(mem_wen)
       putchar(wdata&0xff);
     return;
@@ -88,7 +106,11 @@ extern "C" void pmem_write(int addr, int wdata, char wmask) {
       ((uint32_t*)vmem)[(waddr-FB_ADDR)/4] = wdata;
     return;
   }
+  
 #endif
+  #ifdef CONFIG_DIFFTEST
+  npc_is_ref_skip = false;
+  #endif
   wmask = wmask & 0x00ff;
   uint8_t *cdata = (uint8_t*)(&wdata); 
   for(int i = 0; i<4; i++){
@@ -177,6 +199,8 @@ int main(int argc, char* argv[])
     printf("difftest success\n");
   #endif*/
   sim_close();
+  extern int inst_num;
+  printf("inst nums: %d\n", inst_num);
   assert(result != -1);
   return 0;
 }

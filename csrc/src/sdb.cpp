@@ -2,8 +2,8 @@
 #include <unordered_map>
 #include <functional>
 #include <cstdint>
-#include "verilated_vcd_c.h"
 #include "Vtop.h"
+#include "verilated_vcd_c.h"
 #include "Vtop___024root.h"
 #include <getopt.h>
 #include "mem.h"
@@ -22,19 +22,22 @@ extern "C" void disassemble(char *str, int size, uint64_t pc, uint8_t *code,
                             int nbyte);
 #endif
 
+int inst_num = 0;
+
 void cpu_update(){
   for (int i = 0; i < 32; i++) {
     cpu.gpr[i] = (top->rootp->top__DOT__mreg__DOT__rf)[i];
   }
-  cpu.pc = top->pc;
+  cpu.pc = top->jump?top->upc:(top->pc + 4);
 }
 
 void sim_init()
 {
+    top = new Vtop;
+    Verilated::traceEverOn(true);
     contextp = new VerilatedContext;
     tfp = new VerilatedVcdC;
-    top = new Vtop;
-    contextp->traceEverOn(true);
+    
     top->trace(tfp, 0);
     tfp->open("dump.vcd");
 }
@@ -53,12 +56,12 @@ void step_and_dump_wave() {
   tfp->dump(contextp->time());
 }
 void single_cycle() {
-  top->clk = 0; step_and_dump_wave();
   top->clk = 1; step_and_dump_wave();
+  top->clk = 0; step_and_dump_wave();
 }
 
 void reset(int n) {
-  top->valid = 0;
+  top->read_valid = 0;
   top->rst = 1;
   while (n -- > 0) single_cycle();
   top->rst = 0;
@@ -70,14 +73,16 @@ uint32_t pc;
 int exec_once(){
   
   //top->inst = inst;
-  mem_en = false;
-  mem_wen = false;
-  top->clk = 0; step_and_dump_wave();
-  pc = top->pc;              
-  uint32_t inst = top->inst;
+  inst_num++; 
   mem_en = true;
   mem_wen = top->mem_wen;
   top->clk = 1; step_and_dump_wave();
+  mem_en = false;
+  mem_wen = false;
+  pc = top->pc;              
+  uint32_t inst = top->inst;
+  top->clk = 0; step_and_dump_wave();
+ 
   //mem_en = false;
   #ifdef CONFIG_DEVICE
   device_updata();
@@ -85,7 +90,7 @@ int exec_once(){
 #ifdef CONFIG_ITRACE
   disassemble(inst_buf, 128, (uint64_t)pc, (uint8_t *)(&inst), 4);
   //printf("%08x\n", inst);
-  printf("0x%x\t0x%08x\t%s\t\n", pc, inst, inst_buf);
+  printf("0x%x\t0x%08x\t%s\t\n", top->pc, inst, inst_buf);
 #endif
   //cpu_display();
 #ifdef CONFIG_FTRACE
@@ -157,7 +162,7 @@ int run(){
   char* cmd;
   char* strend;
   std::string line;
-  top->valid = 1;
+  top->read_valid = 1;
   #ifdef CONFIG_DEVICE
   extern void sdl_clear_event_queue();
   sdl_clear_event_queue();

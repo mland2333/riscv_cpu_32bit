@@ -7,4 +7,7 @@
 `define EBREAK 3'b011
 `define CSRW 3'b100
 
+`define IFU_IDLE 2'b01
+`define IFU_WAIT_READY 2'b10
+
 
