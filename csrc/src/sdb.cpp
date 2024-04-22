@@ -28,7 +28,7 @@ void cpu_update(){
   for (int i = 0; i < 32; i++) {
     cpu.gpr[i] = (top->rootp->top__DOT__mreg__DOT__rf)[i];
   }
-  cpu.pc = top->jump?top->upc:(top->pc + 4);
+  cpu.pc = top->pc;
 }
 
 void sim_init()
@@ -163,6 +163,10 @@ int run(){
   char* strend;
   std::string line;
   top->read_valid = 1;
+  #ifdef CONFIG_DIFFTEST
+  extern bool npc_is_ref_skip;
+  npc_is_ref_skip = true;
+  #endif
   #ifdef CONFIG_DEVICE
   extern void sdl_clear_event_queue();
   sdl_clear_event_queue();

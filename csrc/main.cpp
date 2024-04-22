@@ -76,10 +76,7 @@ extern "C" int pmem_read(int addr) {
   
   #endif
   // 总是读取地址为`raddr & ~0x3u`的4字节返回
-  #ifdef CONFIG_DIFFTEST
-  npc_is_ref_skip = false;
-  #endif
-  return (int)vmem_read(raddr, 4);
+    return (int)vmem_read(raddr, 4);
 }
 
 
@@ -108,9 +105,7 @@ extern "C" void pmem_write(int addr, int wdata, char wmask) {
   }
   
 #endif
-  #ifdef CONFIG_DIFFTEST
-  npc_is_ref_skip = false;
-  #endif
+  
   wmask = wmask & 0x00ff;
   uint8_t *cdata = (uint8_t*)(&wdata); 
   for(int i = 0; i<4; i++){

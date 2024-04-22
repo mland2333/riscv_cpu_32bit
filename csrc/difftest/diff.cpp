@@ -57,7 +57,7 @@ int difftest_step(){
     difftest_regcpy(&cpu, DIFFTEST_TO_REF);
     //cpu.pc -= 4;
     npc_is_ref_skip = false;
-    printf("cpu.pc = 0x%x\n", cpu.pc);
+    //printf("cpu.pc = 0x%x\n", cpu.pc);
     return 0;
   }
   difftest_exec(1);
