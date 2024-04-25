@@ -52,8 +52,10 @@ void sim_close()
 
 void step_and_dump_wave() {
   top->eval();
+  
   contextp->timeInc(1);
   tfp->dump(contextp->time());
+  
 }
 void single_cycle() {
   top->clk = 1; step_and_dump_wave();
@@ -70,17 +72,18 @@ void reset(int n) {
 bool mem_en = false;
 bool mem_wen = false;
 uint32_t pc;
+uint32_t inst;
 int exec_once(){
   
   //top->inst = inst;
   inst_num++; 
   mem_en = true;
-  mem_wen = top->mem_wen;
+  mem_wen = true;
   top->clk = 1; step_and_dump_wave();
   mem_en = false;
   mem_wen = false;
   pc = top->pc;              
-  uint32_t inst = top->inst;
+  inst = top->inst;
   top->clk = 0; step_and_dump_wave();
  
   //mem_en = false;
@@ -99,8 +102,8 @@ int exec_once(){
 #ifdef CONFIG_DIFFTEST
   //printf("result=0x%x\n", top->result);
   cpu_update();
-  int difftest_step();
-  if(difftest_step()==-1) return -1;
+  extern int difftest_step();
+  if(top->ifu_valid&& (difftest_step()==-1)) return -1;
 #endif
   return top->exit;
 }

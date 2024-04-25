@@ -2,7 +2,9 @@
 module CSRU(
   input clk, wen,
   input[2:0] csr_ctl,
-  input[31:0] addr, wdata, pc,
+  input [11:0]csr_addr,
+  input[31:0] wdata, pc,
+  input lsu_ready,
   output reg[31:0] rdata, upc
 );
   localparam MSTATUS = 2'b00;
@@ -12,17 +14,17 @@ module CSRU(
   reg[31:0] csr [3:0];
   reg[1:0] addr_map;
   always@(*)begin
-    case(addr)
-      32'h300: begin addr_map = MSTATUS; end
-      32'h305: begin addr_map = MTVEC; end
-      32'h341: begin addr_map = MEPC; end
-      32'h342: begin addr_map = MCAUSE; end
+    case(csr_addr)
+      12'h300: begin addr_map = MSTATUS; end
+      12'h305: begin addr_map = MTVEC; end
+      12'h341: begin addr_map = MEPC; end
+      12'h342: begin addr_map = MCAUSE; end
       default: begin addr_map = 2'b00; end
     endcase
   end
 
    always @(posedge clk) begin
-     if (wen) begin
+     if (lsu_ready && wen) begin
       case(csr_ctl)
         `CSRW:  begin csr[addr_map] <= wdata; end
         `ECALL: begin csr[MEPC] <= pc; csr[MCAUSE] <= 32'h0b; end

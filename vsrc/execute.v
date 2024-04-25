@@ -4,12 +4,15 @@ module EXU#(DATA_WIDTH = 32)(
     input [6:0] op,
     input [2:0] func,
     input [DATA_WIDTH-1:0]src1, src2, imm, pc, csr_rdata,
-    output reg [DATA_WIDTH-1:0]result, csr_wdata,
-    output reg[DATA_WIDTH-1:0]upc,
+    output reg[DATA_WIDTH-1:0]upc, alu_a, alu_b,
     output reg reg_wen,
-    output wire ZF, OF, CF, jump, mem_wen, csr_wen,
+    output wire jump, mem_wen, mem_ren, csr_wen,
     output reg[2:0] csr_ctl,
-    output upc_ctl
+    output reg[3:0] alu_ctl,
+    output reg[1:0] result_ctl,
+    output reg upc_ctl, sub, sign,
+    output reg[7:0] wmask,
+    output reg[2:0] load_ctl
 );
     localparam ADD = 4'b0000;
     localparam XOR = 4'b0001;
@@ -18,136 +21,138 @@ module EXU#(DATA_WIDTH = 32)(
     localparam SLL = 4'b0100;
     localparam SRL = 4'b0101;
     localparam SRA = 4'b0110;
-    localparam SET = 4'b1000;
-    reg [3:0] alu_op;
-    reg sub, sign;
-    reg[31:0] a, b, alu_result;
-    reg[31:0] read_result, rdata;
-    reg[7:0] wmask;
-    reg valid;
+    localparam BEQ = 4'b1000;
+    localparam BNE = 4'b1001;
+    localparam BLT = 4'b1010;
+    localparam BGE = 4'b1011;
+    localparam SET = 4'b1100;
+    //reg [3:0] alu_ctl;
+    //reg sub, sign;
+    //reg[31:0] read_result, rdata;
+    //reg[7:0] wmask;
     always@(*)begin
         sub = 0;
         sign = 0;
         reg_wen = 1;
-        a = src1;
-        b = src2;
-        result = alu_result;
-        csr_wdata = alu_result;
+        alu_a = src1;
+        alu_b = src2;
+        result_ctl = 0;
         csr_wen = 0;
         mem_wen = 0;
-        valid = 0;
+        mem_ren = 0;
         jump = 0;
         upc_ctl = 0;
+        load_ctl = 0;
         case(op)
             7'b0010011:begin //I
-                b = imm;
+                alu_b = imm;
                 case(func)
                     3'b000:begin     //addi
-                        alu_op = ADD;
+                        alu_ctl = ADD;
                     end
                     3'b010:begin     //slti
-                        alu_op = SET;
+                        alu_ctl = SET;
                         sub = 1;
                       end
                     3'b011:begin     //sltiu
-                        alu_op = SET;
+                        alu_ctl = SET;
                         sub = 1;
                     end
                     3'b100:begin     //xori
-                        alu_op = XOR;
+                        alu_ctl = XOR;
                     end
                     3'b110:begin     //ori
-                        alu_op = OR;
+                        alu_ctl = OR;
                     end
                     3'b111:begin     //andi
-                        alu_op = AND;
+                        alu_ctl = AND;
                     end
                     3'b001:begin     //slli
-                        alu_op = SLL;
+                        alu_ctl = SLL;
                     end
                     3'b101:begin     //srai srli
-                        if(imm[10] == 1) alu_op = SRA; //srai
-                        else alu_op = SRL;             //srli
+                        if(imm[10] == 1) alu_ctl = SRA; //srai
+                        else alu_ctl = SRL;             //srli
                     end
                     default:begin
-                        a = src1;
-                        b = src2;
-                        {alu_op, sub, sign} = 0;
+                        alu_a = src1;
+                        alu_b = src2;
+                        {alu_ctl, sub, sign} = 0;
                     end
                 endcase
 
             end
             7'b0000011:begin //lw, lh, lb, lhu, lbu
-               b = imm;
-               valid = 1;
-               alu_op = ADD;
-               result = read_result;
+               alu_b = imm;
+               mem_ren = 1;
+               alu_ctl = ADD;
+               result_ctl = 2'b01;
+               load_ctl = func;
             end
             7'b0110011:begin  //R
                case(func)
                  3'b000:begin       // add sub
-                   alu_op = ADD;
+                   alu_ctl = ADD;
                    sub = imm[5];
                  end
                  3'b001:begin       // sll
-                   alu_op = SLL;
+                   alu_ctl = SLL;
                  end
                  3'b010:begin       // slt
-                   alu_op = SET;
+                   alu_ctl = SET;
                    sign = 1;
                    sub = 1;
                  end
                  3'b011:begin       // sltu
-                   alu_op = SET;
+                   alu_ctl = SET;
                    sub = 1;
                  end
                  3'b100:begin       //xor
-                   alu_op = XOR;
+                   alu_ctl = XOR;
                  end
                  3'b101:begin       //sra srl
-                   if(imm[5] == 1) alu_op = SRA; //sra
-                   else alu_op = SRL;             //srl
+                   if(imm[5] == 1) alu_ctl = SRA; //sra
+                   else alu_ctl = SRL;             //srl
                  end
                  3'b110:begin       //or
-                   alu_op = OR;
+                   alu_ctl = OR;
                  end
                  3'b111:begin       //and
-                   alu_op = AND;
+                   alu_ctl = AND;
                  end
                  default:begin
-                   alu_op = 0;
+                   alu_ctl = 0;
                  end
                endcase
              end
             7'b0010111:begin //auipc
-                a = pc;
-                b = imm;
-                alu_op = ADD;
+                alu_a = pc;
+                alu_b = imm;
+                alu_ctl = ADD;
             end
             7'b1101111:begin //jal
-                a = pc;
-                b = 32'b100;
+                alu_a = pc;
+                alu_b = 32'b100;
                 jump = 1;
-                alu_op = ADD;
+                alu_ctl = ADD;
                 upc = pc + imm;
             end
             7'b1100111:begin //jalr
-                a = pc;
-                b = 32'b100;
+                alu_a = pc;
+                alu_b = 32'b100;
                 jump = 1;
-                alu_op = ADD;
+                alu_ctl = ADD;
                 upc = (src1 + imm)&~1;
             end
             7'b0110111:begin //lui
-                a = 32'b0;
-                b = imm;
-                alu_op = ADD;
+                alu_a = 32'b0;
+                alu_b = imm;
+                alu_ctl = ADD;
             end
             7'b0100011:begin //sw sh sb
                 reg_wen = 0;
-                b = imm;
-                alu_op = ADD;
-                valid = 1;
+                alu_b = imm;
+                alu_ctl = ADD;
                 mem_wen = 1;
                 case(func)
                   3'b000: wmask = 8'b00000001;
@@ -157,23 +162,22 @@ module EXU#(DATA_WIDTH = 32)(
             end
             7'b1100011:begin  //B
                 reg_wen = 0;
-                alu_op = SET;
                 sub = 1;
                 case(func)
-                  3'b000: begin sign = 0; jump = (ZF==1); end  //beq
-                  3'b001: begin sign = 0; jump = (ZF==0); end  //bne
-                  3'b100: begin sign = 1; jump = (result[0]==1); end //blt
-                  3'b101: begin sign = 1; jump = (result[0]==0); end //bge
-                  3'b110: begin sign = 0; jump = (result[0]==1); end //bltu
-                  3'b111: begin sign = 0; jump = (result[0]==0); end //bgeu
-                  default: begin sign = 0; jump = 0; end
+                  3'b000: begin sign = 0; alu_ctl = BEQ; end  //beq
+                  3'b001: begin sign = 0; alu_ctl = BNE; end  //bne
+                  3'b100: begin sign = 1; alu_ctl = BLT; end //blt
+                  3'b101: begin sign = 1; alu_ctl = BGE; end //bge
+                  3'b110: begin sign = 0; alu_ctl = BLT; end //bltu
+                  3'b111: begin sign = 0; alu_ctl = BGE; end //bgeu
+                  default: begin sign = 0; alu_ctl = 0; end
                 endcase
                 upc = pc + imm;
                 //$display("pc = 0x%x", pc);
                 //$display("upc = 0x%x", upc);
             end
             7'b1110011:begin
-              result = csr_rdata;
+              result_ctl = 2'b10;
               case(func)
                 3'b000:begin
                   if(imm[1]==1) csr_ctl = `MRET;
@@ -184,20 +188,20 @@ module EXU#(DATA_WIDTH = 32)(
                   upc_ctl = 1;
                 end
                 3'b001:begin
-                  b = 0;
-                  alu_op = ADD;
+                  alu_b = 0;
+                  alu_ctl = ADD;
                   csr_wen = 1;
                   csr_ctl = `CSRW;
                 end
                 3'b010:begin
-                  b = csr_rdata;
-                  alu_op = OR;
+                  alu_b = csr_rdata;
+                  alu_ctl = OR;
                   csr_wen = 1;
                   csr_ctl = `CSRW;
                 end
                 default:begin
-                  b = 0;
-                  alu_op = 0;
+                  alu_b = 0;
+                  alu_ctl = 0;
                   csr_ctl = 0;
                 end
               endcase
@@ -205,15 +209,16 @@ module EXU#(DATA_WIDTH = 32)(
             end
             default:begin
                 wmask = 0;
-                a = src1;
-                b = src2;
-                {alu_op, sub, sign, reg_wen} = 0;
+                alu_a = src1;
+                alu_b = src2;
+                {alu_ctl, sub, sign, reg_wen} = 0;
             end
         endcase
     end
-    Alu_32bit myalu(.a(a), .b(b), .alu_crl(alu_op), .sub(sub), .sign(sign), .result(alu_result), .ZF(ZF), .OF(OF), .CF(CF));
+    /*
+    Alu_32bit myalu(.a(alu_a), .b(alu_b), .alu_ctl(alu_ctl), .sub(sub), .sign(sign), .result(alu_result), .ZF(ZF), .OF(OF), .CF(CF));
     Memory mem(.raddr(alu_result), .waddr(alu_result), .wdata(src2), .valid(valid), .wen(mem_wen), .wmask(wmask), .rdata(rdata));
-
+    
     always@(*)begin
       case(func)
         3'b000: read_result = {{24{rdata[7]}}, rdata[7:0]};
@@ -224,6 +229,7 @@ module EXU#(DATA_WIDTH = 32)(
         default: read_result = rdata;
       endcase
     end
+    */
 
     //assign exit = (op==7'b1110011) && (func == 3'b0);
 endmodule

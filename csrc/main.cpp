@@ -87,8 +87,12 @@ extern "C" void pmem_write(int addr, int wdata, char wmask) {
     #ifdef CONFIG_DIFFTEST
     npc_is_ref_skip = true;
     #endif
-    if(mem_wen)
+    
+    if(mem_wen){
+      //printf("here\n");
       putchar(wdata&0xff);
+    }
+      
     return;
   }
   else if(waddr == VGACTL_ADDR + 4){
