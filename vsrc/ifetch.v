@@ -17,6 +17,62 @@ module IFU(
   output reg[31:0] inst,
   output reg pc_wen, ifu_valid
 );
+reg ifu_raddr_valid, ifu_rready;
+
+reg[31:0] ifu_rdata;
+SRAM ifu_sram(
+  .clk(clk),
+  .rst(rst),
+  .arvalid(ifu_raddr_valid),
+  .rready(),
+  .awvalid(0),
+  .wvalid(0),
+  .bready(0),
+  .araddr(pc),
+  .awaddr(32'b0),
+  .wdata(32'b0),
+  .wstrb(8'b0),
+  .arready(),
+  .rresp(),
+  .rvalid(),
+  .awready(),
+  .wready(),
+  .bresp(),
+  .bvalid(),
+  .rdata(inst)
+);
+
+always@(posedge clk)begin
+  if(rst)begin
+    ifu_rready <= 0;
+  end
+  else begin
+    if(~ifu_rready && ifu_rvalid)begin
+      ifu_rready <= 1;
+    end
+    else if(ifu_ready)begin
+      ifu_rready <= 0;
+    end
+  end
+end
+
+always@(posedge clk)begin
+  if(rst)begin
+    ifu_raddr_valid <= 0;
+  end
+  else begin
+    if(!ifu_raddr_valid)begin
+      ifu_raddr_valid <= 1;
+    end
+    else if(rvalid)begin
+    end
+  end
+end
+
+
+
+
+
 localparam IDLE = 2'b01;
 localparam WAIT_READY = 2'b10;
 
