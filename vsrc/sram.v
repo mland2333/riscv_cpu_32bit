@@ -1,8 +1,14 @@
+import "DPI-C" function int pmem_read(input int raddr);
+import "DPI-C" function void pmem_write(
+  input int waddr, input int wdata, input byte wmask);
+
 module SRAM(
-  input clk, rst, arvalid, rready, awvalid, wvalid, bready, 
+  input clk, rst,
+  input reg arvalid, rready, awvalid, wvalid, bready, 
   input[31:0] araddr, awaddr, wdata,
-  input [7:0] wstrb,
-  output arready, rresp, rvalid, awready, wready, bresp, bvalid,
+  input[7:0] wstrb,
+  output reg arready, rresp, rvalid, awready, wready, bvalid,
+  output reg[1:0] bresp,
   output[31:0] rdata
 );
 reg[31:0] raddr, waddr;
@@ -19,7 +25,7 @@ always@(posedge clk)begin
       arready <= 1;
       raddr <= araddr;
     end
-    else begin
+    else if(rvalid)begin
       arready <= 0;
     end
   end
@@ -32,10 +38,10 @@ always@(posedge clk)begin
     rvalid <= 0;
   end
   else begin
-    if(~rvalid && arready && arvalid)begin
-      rvalid <= 1;
-      rresp <= 1;
-      rdata <= pmem_read(raddr);
+    if(arready && arvalid)begin
+      #5 rvalid <=  1;
+      #5 rresp <= 0;
+      #5 rdata <= pmem_read(raddr);
     end
     else begin
       rvalid <= 0;
@@ -47,18 +53,12 @@ end
 always@(posedge clk)begin
   if(rst)begin
     awready <= 0;
-    aw_en <= 1;
     waddr <= 0;
   end
   else begin
-    if(~awready && awvalid && wvalid && aw_en)begin
+    if(~awready && awvalid && wvalid)begin
       awready <= 1;
-      aw_en <= 0;
       waddr <= awaddr;
-    end
-    else if(bready && bvalid)begin
-      awready <= 0;
-      aw_en <= 1;
     end
     else begin
       awready <= 0;
@@ -72,9 +72,9 @@ always@(posedge clk)begin
     wready <= 0;
   end
   else begin
-    if(~awready && awvalid && wvalid && aw_en)begin
-      wready <= 1;
-      pmem_write(waddr, wdata, wstrb);
+    if(~awready && awvalid && wvalid)begin
+      wready <= #5 1;
+      #5 pmem_write(awaddr, wdata, wstrb);
     end
     else begin
       wready <= 0;

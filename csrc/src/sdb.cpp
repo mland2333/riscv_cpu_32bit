@@ -91,9 +91,12 @@ int exec_once(){
   device_updata();
   #endif
 #ifdef CONFIG_ITRACE
-  disassemble(inst_buf, 128, (uint64_t)pc, (uint8_t *)(&inst), 4);
-  //printf("%08x\n", inst);
-  printf("0x%x\t0x%08x\t%s\t\n", top->pc, inst, inst_buf);
+  if(top->ifu_valid){
+    disassemble(inst_buf, 128, (uint64_t)pc, (uint8_t *)(&inst), 4);
+    //printf("%08x\n", inst);
+    printf("0x%x\t0x%08x\t%s\t\n", top->pc, inst, inst_buf);
+  }
+  
 #endif
   //cpu_display();
 #ifdef CONFIG_FTRACE
@@ -103,7 +106,7 @@ int exec_once(){
   //printf("result=0x%x\n", top->result);
   cpu_update();
   extern int difftest_step();
-  if(top->ifu_valid&& (difftest_step()==-1)) return -1;
+  if(top->lsu_finish&& (difftest_step()==-1)) return -1;
 #endif
   return top->exit;
 }

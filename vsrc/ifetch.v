@@ -12,19 +12,20 @@ end
 endmodule
  
 module IFU(
-  input clk, rst, pc_valid, lsu_ready,
+  input clk, rst, lsu_finish,
   input [31:0] pc,
   output reg[31:0] inst,
-  output reg pc_wen, ifu_valid
+  output reg pc_wen, ifu_rdata_valid
 );
-reg ifu_raddr_valid, ifu_rready;
-
+reg ifu_raddr_valid, ifu_raddr_ready, ifu_rdata_ready;
+reg rresp, awready, wready, bvalid;
+reg[1:0] bresp;
 reg[31:0] ifu_rdata;
 SRAM ifu_sram(
   .clk(clk),
   .rst(rst),
   .arvalid(ifu_raddr_valid),
-  .rready(),
+  .rready(ifu_rdata_ready),
   .awvalid(0),
   .wvalid(0),
   .bready(0),
@@ -32,56 +33,55 @@ SRAM ifu_sram(
   .awaddr(32'b0),
   .wdata(32'b0),
   .wstrb(8'b0),
-  .arready(),
-  .rresp(),
-  .rvalid(),
-  .awready(),
-  .wready(),
-  .bresp(),
-  .bvalid(),
+  .arready(ifu_raddr_ready),
+  .rresp(rresp),
+  .rvalid(ifu_rdata_valid),
+  .awready(awready),
+  .wready(wready),
+  .bresp(bresp),
+  .bvalid(bvalid),
   .rdata(inst)
 );
-
-always@(posedge clk)begin
-  if(rst)begin
-    ifu_rready <= 0;
-  end
-  else begin
-    if(~ifu_rready && ifu_rvalid)begin
-      ifu_rready <= 1;
-    end
-    else if(ifu_ready)begin
-      ifu_rready <= 0;
-    end
-  end
-end
-
-always@(posedge clk)begin
-  if(rst)begin
-    ifu_raddr_valid <= 0;
-  end
-  else begin
-    if(!ifu_raddr_valid)begin
-      ifu_raddr_valid <= 1;
-    end
-    else if(rvalid)begin
-    end
-  end
-end
-
-
-
-
 
 localparam IDLE = 2'b01;
 localparam WAIT_READY = 2'b10;
 
-reg[1:0] state;
+reg wait_ready;
 /*
 always@(posedge clk)begin
   pc_wen <= pc_valid;
 end
 */
+always@(posedge clk)begin
+  if(rst)begin
+    ifu_raddr_valid <= 0;
+    wait_ready <= 0;
+    pc_wen <= 0;
+  end
+  else begin
+    if(!wait_ready)begin
+        ifu_raddr_valid <= 1;
+        wait_ready <= 1;
+        pc_wen <= 0;
+    end
+    else begin
+        if(ifu_rdata_valid)begin
+          ifu_raddr_valid <= 0;
+        end
+        else if(lsu_finish)begin
+          ifu_raddr_valid <= 0;
+          wait_ready <= 0;
+          pc_wen <= 1;
+        end
+        else begin
+          pc_wen <= 0;
+        end
+      end
+  end
+end
+
+
+/*
 //reg valid;
 always@(posedge clk)begin
   if(rst)begin
@@ -112,7 +112,7 @@ always@(posedge clk)begin
   end
 end
 IFU_SRAM ifu_sram(.clk(clk), .valid(ifu_valid), .addr(pc), .data(inst));
-
+*/
 /*
 always@(*)begin
   if(pc_valid)begin

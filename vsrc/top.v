@@ -3,11 +3,10 @@ module top #(DATA_WIDTH = 32)(
     output [DATA_WIDTH-1 : 0] inst,
     output reg[DATA_WIDTH-1 : 0] pc, upc,
     output [31:0] result,
-    output reg exit, mem_wen, jump, ifu_valid
+    output reg exit, mem_wen, jump, lsu_finish, ifu_valid
 );
 
     wire pc_wen;
-
 
     PC #(DATA_WIDTH) mpc(
       .clk(clk),
@@ -18,16 +17,14 @@ module top #(DATA_WIDTH = 32)(
       .pc(pc)
     );
 
-    wire lsu_ready;
     IFU mifu(
       .clk(clk),
       .rst(rst),
-      .pc_valid(read_valid),
-      .lsu_ready(lsu_ready),
+      .lsu_finish(lsu_finish),
       .pc(pc),
       .inst(inst),
       .pc_wen(pc_wen),
-      .ifu_valid(ifu_valid)
+      .ifu_rdata_valid(ifu_valid)
     );
     wire [6:0]op;
     wire [2:0]func;
@@ -48,7 +45,7 @@ module top #(DATA_WIDTH = 32)(
     wire lsu_valid, reg_wen;
     RegisterFile #(5, DATA_WIDTH) mreg(
       .clk(clk),
-      .lsu_valid(lsu_valid),
+      .lsu_finish(lsu_finish),
       .rdata1(src1),
       .raddr1(rs1),
       .rdata2(src2),
@@ -118,7 +115,7 @@ module top #(DATA_WIDTH = 32)(
     LSU mlsu(
       .clk(clk),
       .rst(rst),
-      .ifu_valid(ifu_valid),
+      .ifu_rdata_valid(ifu_valid),
       .raddr(mem_raddr),
       .waddr(mem_waddr),
       .wdata(mem_wdata),
@@ -126,8 +123,7 @@ module top #(DATA_WIDTH = 32)(
       .wen(mem_wen),
       .wmask(wmask),
       .rdata(mem_rdata),
-      .lsu_ready(lsu_ready),
-      .lsu_valid(lsu_valid),
+      .lsu_finish(lsu_finish),
       .load_ctl(load_ctl)
     );
     wire[11:0] csr_addr;
@@ -140,7 +136,7 @@ module top #(DATA_WIDTH = 32)(
       .csr_addr(csr_addr),
       .wdata(csr_wdata),
       .pc(pc),
-      .lsu_ready(lsu_ready),
+      .lsu_ready(lsu_finish),
       .rdata(csr_rdata),
       .upc(csr_upc)
     );
