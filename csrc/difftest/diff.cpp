@@ -15,7 +15,7 @@ void (*difftest_raise_intr)(uint64_t NO) = NULL;
 
 int icount = 0;
 bool npc_is_ref_skip = false;
-
+bool npc_is_ref_skip_next = false;
 void init_difftest(char *ref_so_file, long img_size, int port)
 {
   if(ref_so_file == nullptr){
@@ -57,8 +57,18 @@ int difftest_step(){
     difftest_regcpy(&cpu, DIFFTEST_TO_REF);
     //cpu.pc -= 4;
     npc_is_ref_skip = false;
+    if(npc_is_ref_skip_next)
+    {
+      npc_is_ref_skip_next = false;
+      npc_is_ref_skip = true;
+    }
     //printf("cpu.pc = 0x%x\n", cpu.pc);
     return 0;
+  }
+  if(npc_is_ref_skip_next)
+  {
+    npc_is_ref_skip_next = false;
+    npc_is_ref_skip = true;
   }
   difftest_exec(1);
   icount ++;

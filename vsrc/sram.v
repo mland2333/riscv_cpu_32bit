@@ -31,6 +31,8 @@ always@(posedge clk)begin
   end
 end
 
+
+
 //rdata
 always@(posedge clk)begin
   if(rst)begin
@@ -39,9 +41,9 @@ always@(posedge clk)begin
   end
   else begin
     if(arready && arvalid)begin
-      #5 rvalid <=  1;
-      #5 rresp <= 0;
-      #5 rdata <= pmem_read(raddr);
+      rvalid <= #5 1;
+      rresp <= 0;
+      rdata <= pmem_read(raddr);
     end
     else begin
       rvalid <= 0;
@@ -73,8 +75,8 @@ always@(posedge clk)begin
   end
   else begin
     if(~awready && awvalid && wvalid)begin
-      wready <= #5 1;
-      #5 pmem_write(awaddr, wdata, wstrb);
+      wready <= 1;
+      pmem_write(awaddr, wdata, wstrb);
     end
     else begin
       wready <= 0;

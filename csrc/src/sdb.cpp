@@ -91,7 +91,7 @@ int exec_once(){
   device_updata();
   #endif
 #ifdef CONFIG_ITRACE
-  if(top->ifu_valid){
+  if(top->lsu_finish){
     disassemble(inst_buf, 128, (uint64_t)pc, (uint8_t *)(&inst), 4);
     //printf("%08x\n", inst);
     printf("0x%x\t0x%08x\t%s\t\n", top->pc, inst, inst_buf);

@@ -65,7 +65,7 @@ always@(posedge clk)begin
         pc_wen <= 0;
     end
     else begin
-        if(ifu_rdata_valid)begin
+        if(ifu_rdata_valid && ifu_raddr_valid)begin
           ifu_raddr_valid <= 0;
         end
         else if(lsu_finish)begin

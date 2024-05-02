@@ -25,7 +25,7 @@ extern int write_sync;
 extern void* vmem;
 
 #ifdef CONFIG_DIFFTEST
-extern bool npc_is_ref_skip;
+extern bool npc_is_ref_skip_next;
 #endif
 
 extern "C" int pmem_read(int addr) {
@@ -34,14 +34,14 @@ extern "C" int pmem_read(int addr) {
   
   if (raddr == RTC_ADDR + 4) {
     #ifdef CONFIG_DIFFTEST
-    npc_is_ref_skip = true;
+    npc_is_ref_skip_next = true;
     #endif
     d = get_time();
     return (int)(d >> 32); 
   }
   else if (raddr == RTC_ADDR) {
     #ifdef CONFIG_DIFFTEST
-    npc_is_ref_skip = true;
+    npc_is_ref_skip_next = true;
     #endif
     return (int)d;
   }
@@ -85,7 +85,7 @@ extern "C" void pmem_write(int addr, int wdata, char wmask) {
 #ifdef CONFIG_DEVICE 
   if(waddr == SERIAL_PORT){
     #ifdef CONFIG_DIFFTEST
-    npc_is_ref_skip = true;
+    npc_is_ref_skip_next = true;
     #endif
     
     if(mem_wen){
