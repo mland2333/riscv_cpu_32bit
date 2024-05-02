@@ -78,9 +78,6 @@ always@(posedge clk)begin
           arvalid <= 0;
           read_wait_ready <= 0;
         end
-        else if(arvalid && arready)begin
-          arvalid <= 0;
-        end
     end
   end
 end

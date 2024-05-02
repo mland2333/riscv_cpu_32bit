@@ -1,7 +1,7 @@
 module COUNT(
   input clk, rst, start,
   input[7:0] count,
-  output zero
+  output reg zero
 );
 
 reg[7:0] _count;
@@ -11,7 +11,7 @@ reg state;
 always@(posedge clk)begin
   if(rst)begin
     state <= 0;
-    _count <= 7'b0;
+    _count <= 8'b0;
     zero <= 0;
   end
   else if(start && state)begin

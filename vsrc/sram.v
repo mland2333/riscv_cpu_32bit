@@ -14,6 +14,11 @@ module SRAM(
 reg[31:0] raddr, waddr;
 reg aw_en;
 
+reg read_delay_start, read_delay_over;
+wire[7:0] read_delay_count;
+assign read_delay_count = 8'b101;
+
+COUNT read_delay(.clk(clk), .rst(rst), .start(read_delay_start), .count(read_delay_count), .zero(read_delay_over));
 //araddr
 always@(posedge clk)begin
   if(rst) begin
@@ -24,6 +29,7 @@ always@(posedge clk)begin
     if(~arready && arvalid)begin
       arready <= 1;
       raddr <= araddr;
+      read_delay_start <= 1;
     end
     else if(rvalid)begin
       arready <= 0;
@@ -41,9 +47,12 @@ always@(posedge clk)begin
   end
   else begin
     if(arready && arvalid)begin
-      rvalid <= #5 1;
-      rresp <= 0;
-      rdata <= pmem_read(raddr);
+      //if(read_delay_over)begin
+        rvalid <= 1;
+        rresp <= 0;
+        rdata <= pmem_read(raddr);
+        //read_delay_start <= 0;
+      //end
     end
     else begin
       rvalid <= 0;
