@@ -3,7 +3,7 @@ module top #(DATA_WIDTH = 32)(
     output [DATA_WIDTH-1 : 0] inst,
     output reg[DATA_WIDTH-1 : 0] pc, upc,
     output [31:0] result,
-    output reg exit, mem_wen, jump, lsu_finish, ifu_valid
+    output reg exit, mem_wen, jump, lsu_finish
 );
 
     wire pc_wen;
@@ -16,15 +16,27 @@ module top #(DATA_WIDTH = 32)(
       .jump(jump),
       .pc(pc)
     );
-
+    
+    wire ifu_arready, ifu_ok, ifu_request, ifu_arvalid, ifu_rready;
+    wire ifu_rvalid;
+    wire[1:0] ifu_rresp;
+    wire[31:0] ifu_rdata, ifu_araddr;
+    wire inst_valid;
     IFU mifu(
       .clk(clk),
       .rst(rst),
       .lsu_finish(lsu_finish),
       .pc(pc),
       .inst(inst),
+      .ifu_rvalid(ifu_rvalid),
+      .ifu_arready(ifu_arready),
+      .ifu_rresp(ifu_rresp),
+      .ifu_rdata(ifu_rdata),
+      .ifu_arvalid(ifu_arvalid),
+      .ifu_rready(ifu_rready),
+      .ifu_araddr(ifu_araddr),
       .pc_wen(pc_wen),
-      .ifu_rdata_valid(ifu_valid)
+      .inst_valid(inst_valid)
     );
     wire [6:0]op;
     wire [2:0]func;
@@ -42,7 +54,7 @@ module top #(DATA_WIDTH = 32)(
     );
 
     wire[DATA_WIDTH-1 : 0] src1, src2, reg_wdata;
-    wire lsu_valid, reg_wen;
+    wire reg_wen;
     RegisterFile #(5, DATA_WIDTH) mreg(
       .clk(clk),
       .lsu_finish(lsu_finish),
@@ -109,13 +121,18 @@ module top #(DATA_WIDTH = 32)(
     );
     reg[31:0] mem_rdata, mem_wdata;
     wire[31:0] mem_raddr, mem_waddr;
+    wire lsu_arvalid, lsu_rready, lsu_awvalid, lsu_wvalid, lsu_bready, lsu_wready;
+    wire lsu_rvalid, lsu_bvalid, lsu_awready, lsu_arready; 
+    wire [31:0] lsu_araddr, lsu_awaddr, lsu_wdata, lsu_rdata;
+    wire[7:0] lsu_wstrb;
+    wire[1:0] lsu_rresp, lsu_bresp, rresp, bresp;
     assign mem_raddr = alu_result;
     assign mem_waddr = alu_result;
     assign mem_wdata = src2;
     LSU mlsu(
       .clk(clk),
       .rst(rst),
-      .ifu_rdata_valid(ifu_valid),
+      .inst_rvalid(inst_valid),
       .raddr(mem_raddr),
       .waddr(mem_waddr),
       .wdata(mem_wdata),
@@ -124,7 +141,110 @@ module top #(DATA_WIDTH = 32)(
       .wmask(wmask),
       .rdata(mem_rdata),
       .lsu_finish(lsu_finish),
-      .load_ctl(load_ctl)
+      .load_ctl(load_ctl),
+      .lsu_rvalid(lsu_rvalid),
+      .lsu_arready(lsu_arready),
+      .lsu_awready(lsu_awready),
+      .lsu_bvalid(lsu_bvalid),
+      .rresp(lsu_rresp),
+      .bresp(lsu_bresp),
+      .lsu_rdata(lsu_rdata),
+      .lsu_arvalid(lsu_arvalid),
+      .lsu_rready(lsu_rready),
+      .lsu_awvalid(lsu_awvalid),
+      .lsu_wvalid(lsu_wvalid),
+      .lsu_wready(lsu_wready),
+      .lsu_bready(lsu_bready),
+      .lsu_araddr(lsu_araddr),
+      .lsu_awaddr(lsu_awaddr),
+      .lsu_wdata(lsu_wdata),
+      .lsu_wstrb(lsu_wstrb)
+    );
+    wire[7:0] wstrb;
+    wire rvalid, arready, arvalid, rready, awvalid, wvalid, bready, awready, bvalid, wready;
+    wire[31:0] araddr, awaddr, wdata, rdata;
+    wire ifu_awready, ifu_wready, ifu_bvalid;
+    wire [1:0] ifu_bresp;
+    ARBITER marbiter(
+      .clk(clk),
+      .rst(rst),
+
+      .arvalid1(ifu_arvalid),
+      .rready1(ifu_rready),
+      .araddr1(ifu_araddr),
+      .arready1(ifu_arready),
+      .rvalid1(ifu_rvalid),
+      .rresp1(ifu_rresp),
+      .rdata1(ifu_rdata),
+      .awvalid1(0),
+      .wvalid1(0),
+      .bready1(0),
+      .wstrb1(0),
+      .awaddr1(0),
+      .wdata1(0),
+      .awready1(ifu_awready),
+      .wready1(ifu_wready),
+      .bvalid1(ifu_bvalid),
+      .bresp1(ifu_bresp),
+
+      .arvalid2(lsu_arvalid),
+      .rready2(lsu_rready),
+      .araddr2(lsu_araddr),
+      .arready2(lsu_arready),
+      .rvalid2(lsu_rvalid),
+      .rresp2(lsu_rresp),
+      .rdata2(lsu_rdata),
+      .awvalid2(lsu_awvalid),
+      .wvalid2(lsu_wvalid),
+      .bready2(lsu_bready),
+      .wstrb2(lsu_wstrb),
+      .awaddr2(lsu_awaddr),
+      .wdata2(lsu_wdata),
+      .awready2(lsu_awready),
+      .wready2(lsu_wready),
+      .bvalid2(lsu_bvalid),
+      .bresp2(lsu_bresp),
+
+      .arready(arready),
+      .rvalid(rvalid),
+      .awready(awready),
+      .wready(wready),
+      .bvalid(bvalid),
+      .rresp(rresp),
+      .bresp(bresp),
+      .rdata(rdata),
+      .arvalid(arvalid),
+      .rready(rready),
+      .awvalid(awvalid),
+      .wvalid(wvalid),
+      .bready(bready),
+      .araddr(araddr),
+      .awaddr(awaddr),
+      .wdata(wdata),
+      .wstrb(wstrb)
+    );
+
+    SRAM msram(
+      .clk(clk),
+      .rst(rst),
+      .arvalid(arvalid),
+      .rready(rready),
+      .awvalid(awvalid),
+      .wvalid(wvalid),
+      .bready(bready),
+      .araddr(araddr),
+      .awaddr(awaddr),
+      .wdata(wdata),
+      .wstrb(wstrb),
+
+      .arready(arready),
+      .rresp(rresp), 
+      .rvalid(rvalid), 
+      .awready(awready), 
+      .wready(wready), 
+      .bvalid(bvalid),
+      .bresp(bresp),
+      .rdata(rdata)
     );
     wire[11:0] csr_addr;
     assign csr_addr = imm[11:0];

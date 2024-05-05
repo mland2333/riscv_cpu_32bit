@@ -1,81 +1,50 @@
-/*module Memory(
-  input[31:0] raddr, waddr, wdata,
-  input valid, wen, 
-  input [7:0] wmask,
-  output reg[31:0] rdata
-);
-always @(*) begin
-  if (valid) begin // 有读写请求时
-    rdata = pmem_read(raddr);
-    if (wen) begin // 有写请求时
-      pmem_write(waddr, wdata, wmask);
-      //$display("write\n");
-    end
-  end
-  else begin
-    rdata = 0;
-  end
-end
-
-endmodule*/
-
-
 module LSU(
-  input clk, rst, ifu_rdata_valid,
+  input clk, rst, inst_rvalid,
   input[31:0] raddr, waddr, wdata,
   input ren, wen,
   input[7:0] wmask,
   input[2:0] load_ctl,
   output reg[31:0] rdata,
-  output lsu_finish
+  output lsu_finish,
+  
+  input reg lsu_rvalid, lsu_arready, lsu_awready, lsu_wready, lsu_bvalid, 
+  input[1:0] rresp, bresp,
+  input [31:0] lsu_rdata,
+  output reg lsu_arvalid, lsu_rready, lsu_awvalid, lsu_wvalid, lsu_bready, 
+  output[31:0] lsu_araddr, lsu_awaddr, lsu_wdata ,
+  output[7:0] lsu_wstrb
 );
-localparam IDLE = 2'b01;
-localparam WAIT_READY = 2'b10;
-reg read_wait_ready, write_wait_ready;
+
+assign lsu_wstrb = wmask;
+assign lsu_araddr = raddr;
+assign lsu_awaddr = waddr;
+assign lsu_wdata = wdata;
+
+
 reg[31:0] _rdata;
+always@(posedge clk)begin
+  if(lsu_rvalid)begin
+    _rdata <= lsu_rdata;
+  end
+end
 
-reg arvalid, arready, rvalid, rready, rresp;
-reg awvalid, wvalid, bready, awready, wready, bvalid;
-reg[1:0] bresp;
-reg[31:0] ifu_rdata;
-SRAM ifu_sram(
-  .clk(clk),
-  .rst(rst),
-  .arvalid(arvalid),
-  .rready(rready),
-  .awvalid(awvalid),
-  .wvalid(wvalid),
-  .bready(bready),
-  .araddr(raddr),
-  .awaddr(waddr),
-  .wdata(wdata),
-  .wstrb(wmask),
-  .arready(arready),
-  .rresp(rresp),
-  .rvalid(rvalid),
-  .awready(awready),
-  .wready(wready),
-  .bresp(bresp),
-  .bvalid(bvalid),
-  .rdata(_rdata)
-);
-
+reg read_wait_ready, write_wait_ready;
 //load
 always@(posedge clk)begin
   if(rst)begin
-    arvalid <= 0;
+    lsu_arvalid <= 0;
     read_wait_ready <= 0;
   end
   else begin
     if(!read_wait_ready && ren)begin
-        if(ifu_rdata_valid)begin
-          arvalid <= ren;
+        if(inst_rvalid)begin
+          lsu_arvalid <= ren;
           read_wait_ready <= 1;
         end
     end
     else begin
-        if(rvalid)begin
-          arvalid <= 0;
+        if(lsu_arvalid && lsu_arready)begin
+          lsu_arvalid <= 0;
           read_wait_ready <= 0;
         end
     end
@@ -85,37 +54,38 @@ end
 //store
 always@(posedge clk)begin
   if(rst)begin
-    awvalid <= 0;
+    lsu_awvalid <= 0;
     write_wait_ready <= 0;
-    bready <= 0;
+    lsu_bready <= 0;
   end
   else begin
     if(!write_wait_ready && wen)begin
-        bready <= 0;
-        if(ifu_rdata_valid)begin
-          awvalid <= wen;
-          wvalid <= wen;
+        lsu_bready <= 0;
+        if(inst_rvalid)begin
+          lsu_awvalid <= wen;
+          lsu_wvalid <= wen;
           write_wait_ready <= 1;
         end
       end
     else begin
-        if(bvalid)begin
-          awvalid <= 0;
-          bready <= 1;
+        if(lsu_wready)begin
+          lsu_awvalid <= 0;
+          lsu_wvalid <= 0;
+          lsu_bready <= 1;
           write_wait_ready <= 0;
         end
-        else if(awvalid && awready)begin
-          awvalid <= 0;
+        else if(lsu_awvalid && lsu_awready)begin
+          lsu_awvalid <= 0;
         end
         else begin
-          bready <= 0;
+          lsu_bready <= 0;
         end
       end
   end
 end
 
 always@(posedge clk)begin
-  lsu_finish <= (~lsu_finish) && ((ifu_rdata_valid & ~wen &~ren) || wen&bvalid || ren&rvalid);
+  lsu_finish <= (~lsu_finish) && ((inst_rvalid & ~wen &~ren) || wen&lsu_wready || ren&lsu_rvalid);
 end
 
 
