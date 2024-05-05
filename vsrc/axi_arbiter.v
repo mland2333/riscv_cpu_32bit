@@ -31,6 +31,8 @@ module ARBITER(
   output reg arvalid, rready, awvalid, wvalid, bready, 
   output reg[31:0] araddr, awaddr, wdata,
   output reg[7:0] wstrb
+
+
 );
 localparam IDLE_READ = 2'b00;
 localparam MEM1_READ = 2'b01;

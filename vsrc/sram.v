@@ -1,6 +1,6 @@
-import "DPI-C" function int pmem_read(input int raddr);
+/*import "DPI-C" function int pmem_read(input int raddr);
 import "DPI-C" function void pmem_write(
-  input int waddr, input int wdata, input byte wmask);
+  input int waddr, input int wdata, input byte wmask);*/
 
 module SRAM(
   input clk, rst,
@@ -50,7 +50,7 @@ always@(posedge clk)begin
       //if(read_delay_over)begin
         rvalid <= 1;
         rresp <= 0;
-        rdata <= pmem_read(_raddr);
+        //rdata <= pmem_read(_raddr);
         need_read <= 0;
         //read_delay_start <= 0;
       //end
@@ -89,7 +89,7 @@ always@(posedge clk)begin
   else begin
     if(need_write)begin
       wready <= 1;
-      pmem_write(_waddr, _wdata, wstrb);
+      //pmem_write(_waddr, _wdata, wstrb);
       need_write <= 0;
     end
     else begin

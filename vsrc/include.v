@@ -10,7 +10,8 @@
 `define IFU_IDLE 2'b01
 `define IFU_WAIT_READY 2'b10
 
-
+`define DEVICE_BASE 32'ha0000000
+`define UART 32'ha00003f8
 
 
 
