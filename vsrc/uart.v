@@ -1,9 +1,11 @@
 module UART(
   input clk, rst,
-  input awvalid, wvalid, bready,
-  input [31:0]awaddr, wdata,
-  output reg awready, wready, bvalid,
-  output reg[1:0] bresp
+  input reg arvalid, rready, awvalid, wvalid, bready,
+  input[31:0] araddr, awaddr, wdata,
+  input[7:0] wstrb,
+  output reg arready, rvalid, awready, wready, bvalid,
+  output reg[1:0] rresp, bresp,
+  output[31:0] rdata
 );
 
 reg need_write;

@@ -3,7 +3,7 @@ module top #(DATA_WIDTH = 32)(
     output [DATA_WIDTH-1 : 0] inst,
     output reg[DATA_WIDTH-1 : 0] pc, upc,
     output [31:0] result,
-    output reg exit, mem_wen, jump, lsu_finish
+    output reg exit, mem_wen, jump, lsu_finish, diff_skip
 );
 
     wire pc_wen;
@@ -223,29 +223,173 @@ module top #(DATA_WIDTH = 32)(
       .wdata(wdata),
       .wstrb(wstrb)
     );
+    wire sram_arvalid, sram_rready, sram_awvalid, sram_wvalid, sram_bready, sram_wready;
+    wire sram_rvalid, sram_bvalid, sram_awready, sram_arready; 
+    wire [31:0] sram_araddr, sram_awaddr, sram_wdata, sram_rdata;
+    wire[7:0] sram_wstrb;
+    wire[1:0] sram_rresp, sram_bresp;
+
+    wire uart_arvalid, uart_rready, uart_awvalid, uart_wvalid, uart_bready, uart_wready;
+    wire uart_rvalid, uart_bvalid, uart_awready, uart_arready; 
+    wire [31:0] uart_araddr, uart_awaddr, uart_wdata, uart_rdata;
+    wire[7:0] uart_wstrb;
+    wire[1:0] uart_rresp, uart_bresp;
+
+    wire clint_arvalid, clint_rready, clint_awvalid, clint_wvalid, clint_bready, clint_wready;
+    wire clint_rvalid, clint_bvalid, clint_awready, clint_arready; 
+    wire [31:0] clint_araddr, clint_awaddr, clint_wdata, clint_rdata;
+    wire[7:0] clint_wstrb;
+    wire[1:0] clint_rresp, clint_bresp;
+    wire clint_high;
+
+    XBAR mxbar(
+      .arvalid(arvalid),
+      .rready(rready),
+      .araddr(araddr),
+      .arready(arready),
+      .rvalid(rvalid),
+      .rresp(rresp),
+      .rdata(rdata),
+      .awvalid(awvalid),
+      .wvalid(wvalid),
+      .bready(bready),
+      .wstrb(wstrb),
+      .awaddr(awaddr),
+      .wdata(wdata),
+      .awready(awready),
+      .wready(wready),
+      .bvalid(bvalid),
+      .bresp(bresp),
+
+      .arvalid1(sram_arvalid),
+      .rready1(sram_rready),
+      .araddr1(sram_araddr),
+      .arready1(sram_arready),
+      .rvalid1(sram_rvalid),
+      .rresp1(sram_rresp),
+      .rdata1(sram_rdata),
+      .awvalid1(sram_awvalid),
+      .wvalid1(sram_wvalid),
+      .bready1(sram_bready),
+      .wstrb1(sram_wstrb),
+      .awaddr1(sram_awaddr),
+      .wdata1(sram_wdata),
+      .awready1(sram_awready),
+      .wready1(sram_wready),
+      .bvalid1(sram_bvalid),
+      .bresp1(sram_bresp),
+
+      .arvalid2(uart_arvalid),
+      .rready2(uart_rready),
+      .araddr2(uart_araddr),
+      .arready2(uart_arready),
+      .rvalid2(uart_rvalid),
+      .rresp2(uart_rresp),
+      .rdata2(uart_rdata),
+      .awvalid2(uart_awvalid),
+      .wvalid2(uart_wvalid),
+      .bready2(uart_bready),
+      .wstrb2(uart_wstrb),
+      .awaddr2(uart_awaddr),
+      .wdata2(uart_wdata),
+      .awready2(uart_awready),
+      .wready2(uart_wready),
+      .bvalid2(uart_bvalid),
+      .bresp2(uart_bresp),
+
+      .arvalid3(clint_arvalid),
+      .rready3(clint_rready),
+      .araddr3(clint_araddr),
+      .arready3(clint_arready),
+      .rvalid3(clint_rvalid),
+      .rresp3(clint_rresp),
+      .rdata3(clint_rdata),
+      .awvalid3(clint_awvalid),
+      .wvalid3(clint_wvalid),
+      .bready3(clint_bready),
+      .wstrb3(clint_wstrb),
+      .awaddr3(clint_awaddr),
+      .wdata3(clint_wdata),
+      .awready3(clint_awready),
+      .wready3(clint_wready),
+      .bvalid3(clint_bvalid),
+      .bresp3(clint_bresp),
+      .high(clint_high),
+
+      .diff_skip(diff_skip)
+    );
+
 
     SRAM msram(
       .clk(clk),
       .rst(rst),
-      .arvalid(arvalid),
-      .rready(rready),
-      .awvalid(awvalid),
-      .wvalid(wvalid),
-      .bready(bready),
-      .araddr(araddr),
-      .awaddr(awaddr),
-      .wdata(wdata),
-      .wstrb(wstrb),
+      .arvalid(sram_arvalid),
+      .rready(sram_rready),
+      .awvalid(sram_awvalid),
+      .wvalid(sram_wvalid),
+      .bready(sram_bready),
+      .araddr(sram_araddr),
+      .awaddr(sram_awaddr),
+      .wdata(sram_wdata),
+      .wstrb(sram_wstrb),
 
-      .arready(arready),
-      .rresp(rresp), 
-      .rvalid(rvalid), 
-      .awready(awready), 
-      .wready(wready), 
-      .bvalid(bvalid),
-      .bresp(bresp),
-      .rdata(rdata)
+      .arready(sram_arready),
+      .rresp(sram_rresp),
+      .rvalid(sram_rvalid),
+      .awready(sram_awready),
+      .wready(sram_wready),
+      .bvalid(sram_bvalid),
+      .bresp(sram_bresp),
+      .rdata(sram_rdata)
     );
+    
+    UART muart(
+      .clk(clk),
+      .rst(rst),
+      .arvalid(uart_arvalid),
+      .rready(uart_rready),
+      .awvalid(uart_awvalid),
+      .wvalid(uart_wvalid),
+      .bready(uart_bready),
+      .araddr(uart_araddr),
+      .awaddr(uart_awaddr),
+      .wdata(uart_wdata),
+      .wstrb(uart_wstrb),
+
+      .arready(uart_arready),
+      .rresp(uart_rresp),
+      .rvalid(uart_rvalid),
+      .awready(uart_awready),
+      .wready(uart_wready),
+      .bvalid(uart_bvalid),
+      .bresp(uart_bresp),
+      .rdata(uart_rdata)
+    );
+    CLINT mclint(
+      .clk(clk),
+      .rst(rst),
+      .arvalid(clint_arvalid),
+      .rready(clint_rready),
+      .awvalid(clint_awvalid),
+      .wvalid(clint_wvalid),
+      .bready(clint_bready),
+      .araddr(clint_araddr),
+      .awaddr(clint_awaddr),
+      .wdata(clint_wdata),
+      .wstrb(clint_wstrb),
+
+      .arready(clint_arready),
+      .rresp(clint_rresp),
+      .rvalid(clint_rvalid),
+      .awready(clint_awready),
+      .wready(clint_wready),
+      .bvalid(clint_bvalid),
+      .bresp(clint_bresp),
+      .rdata(clint_rdata),
+
+      .high(clint_high)
+    );
+
     wire[11:0] csr_addr;
     assign csr_addr = imm[11:0];
 

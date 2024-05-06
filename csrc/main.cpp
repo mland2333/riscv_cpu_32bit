@@ -36,14 +36,14 @@ extern "C" int pmem_read(int addr) {
     #ifdef CONFIG_DIFFTEST
     npc_is_ref_skip_next = true;
     #endif
-    d = get_time();
-    return (int)(d >> 32); 
+    //d = get_time();
+    //return (int)(d >> 32); 
   }
   else if (raddr == RTC_ADDR) {
     #ifdef CONFIG_DIFFTEST
     npc_is_ref_skip_next = true;
     #endif
-    return (int)d;
+    //return (int)d;
   }
   else if(raddr == VGACTL_ADDR){
     return HEIGHT;
@@ -90,7 +90,7 @@ extern "C" void pmem_write(int addr, int wdata, char wmask) {
     
     if(mem_wen){
       //printf("here\n");
-      putchar(wdata&0xff);
+      //putchar(wdata&0xff);
     }
       
     return;

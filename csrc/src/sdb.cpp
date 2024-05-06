@@ -106,6 +106,8 @@ int exec_once(){
   //printf("result=0x%x\n", top->result);
   cpu_update();
   extern int difftest_step();
+  extern bool npc_is_ref_skip_next;
+  npc_is_ref_skip_next = top->diff_skip == 1 ? 1 : npc_is_ref_skip_next;
   if(top->lsu_finish&& (difftest_step()==-1)) return -1;
 #endif
   return top->exit;
