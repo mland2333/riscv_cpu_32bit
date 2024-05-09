@@ -1,4 +1,4 @@
-module IDU(
+module ysyx_20020207_IDU(
     input[31:0] inst,
     output[6:0] op,
     output[2:0] func,
@@ -11,7 +11,6 @@ module IDU(
     assign rd = inst[11:7];
     assign rs1 = inst[19:15];
     assign rs2 = inst[24:20];
-    
     always@(*)begin
         case(inst[6:0])
             7'b0110111: //lui

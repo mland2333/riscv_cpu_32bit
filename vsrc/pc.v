@@ -1,4 +1,4 @@
-module PC#(DATA_WIDTH) (
+module ysyx_20020207_PC#(DATA_WIDTH) (
     input clk, rst, wen,
     input [DATA_WIDTH-1 : 0] upc,
     input jump,
@@ -7,7 +7,7 @@ module PC#(DATA_WIDTH) (
     //reg pc_wen;
     always@(posedge clk)begin
         //pc_wen <= wen;
-        if(rst) pc <= 32'h80000000;
+        if(rst) pc <= 32'h20000000;
         else if(wen) begin
           if(jump) pc <= upc;
           else pc <= pc + 4;

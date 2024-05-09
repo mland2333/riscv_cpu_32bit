@@ -2,9 +2,9 @@
 #include <unordered_map>
 #include <functional>
 #include <cstdint>
-#include "Vtop.h"
+#include "VysyxSoCFull.h"
 #include "verilated_vcd_c.h"
-#include "Vtop___024root.h"
+#include "VysyxSoCFull___024root.h"
 #include <getopt.h>
 #include "mem.h"
 #include "sdb.h"
@@ -13,7 +13,7 @@
 #include "ftrace.h"
 VerilatedContext* contextp = NULL;
 VerilatedVcdC* tfp = NULL;
-Vtop* top = NULL;
+VysyxSoCFull* top = NULL;
 std::unordered_map<std::string, std::function<int(char*)>> sdb_map;
 CPU_status cpu;
 #ifdef CONFIG_ITRACE
@@ -26,14 +26,14 @@ int inst_num = 0;
 
 void cpu_update(){
   for (int i = 0; i < 32; i++) {
-    cpu.gpr[i] = (top->rootp->top__DOT__mreg__DOT__rf)[i];
+    cpu.gpr[i] = (top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__mreg__DOT__rf)[i];
   }
-  cpu.pc = top->pc;
+  cpu.pc = top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__pc;
 }
 
 void sim_init()
 {
-    top = new Vtop;
+    top = new VysyxSoCFull;
     Verilated::traceEverOn(true);
     contextp = new VerilatedContext;
     tfp = new VerilatedVcdC;
@@ -58,15 +58,14 @@ void step_and_dump_wave() {
   
 }
 void single_cycle() {
-  top->clk = 1; step_and_dump_wave();
-  top->clk = 0; step_and_dump_wave();
+  top->clock = 1; step_and_dump_wave();
+  top->clock = 0; step_and_dump_wave();
 }
 
 void reset(int n) {
-  top->read_valid = 0;
-  top->rst = 1;
+  top->reset = 1;
   while (n -- > 0) single_cycle();
-  top->rst = 0;
+  top->reset = 0;
 }
 
 bool mem_en = false;
@@ -79,28 +78,28 @@ int exec_once(){
   inst_num++; 
   mem_en = true;
   mem_wen = true;
-  top->clk = 1; step_and_dump_wave();
+  top->clock = 1; step_and_dump_wave();
   mem_en = false;
   mem_wen = false;
-  pc = top->pc;              
-  inst = top->inst;
-  top->clk = 0; step_and_dump_wave();
+  pc = top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__pc;              
+  inst = top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__inst;
+  top->clock = 0; step_and_dump_wave();
  
   //mem_en = false;
   #ifdef CONFIG_DEVICE
   device_updata();
   #endif
 #ifdef CONFIG_ITRACE
-  if(top->lsu_finish){
+  if(top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__lsu_finish){
     disassemble(inst_buf, 128, (uint64_t)pc, (uint8_t *)(&inst), 4);
     //printf("%08x\n", inst);
-    printf("0x%x\t0x%08x\t%s\t\n", top->pc, inst, inst_buf);
+    printf("0x%x\t0x%08x\t%s\t\n", top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__pc, inst, inst_buf);
   }
   
 #endif
   //cpu_display();
 #ifdef CONFIG_FTRACE
-  ftrace(inst, pc, top->pc);
+  ftrace(inst, pc, top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__pc);
 #endif
 #ifdef CONFIG_DIFFTEST
   //printf("result=0x%x\n", top->result);
@@ -108,9 +107,9 @@ int exec_once(){
   extern int difftest_step();
   extern bool npc_is_ref_skip_next;
   npc_is_ref_skip_next = top->diff_skip == 1 ? 1 : npc_is_ref_skip_next;
-  if(top->lsu_finish&& (difftest_step()==-1)) return -1;
+  if(top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__lsu_finish&& (difftest_step()==-1)) return -1;
 #endif
-  return top->exit;
+  return top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__is_exit;
 }
 
 int cmd_c(char* args) {
@@ -136,7 +135,7 @@ int cmd_si(char* args) {
 }
 int cmd_info(char* args) {
   for (int i = 0; i < 32; i++) {
-    printf("x[%d] = 0x%x ", i, (top->rootp->top__DOT__mreg__DOT__rf)[i]);
+    printf("x[%d] = 0x%x ", i, (top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__mreg__DOT__rf)[i]);
     //std::cout << std::format("x{} = 0x{:x} ", i,
                              //top->rootp->top__DOT__register__DOT__rf[i]);
   }
@@ -170,7 +169,6 @@ int run(){
   char* cmd;
   char* strend;
   std::string line;
-  top->read_valid = 1;
   #ifdef CONFIG_DIFFTEST
   extern bool npc_is_ref_skip;
   npc_is_ref_skip = true;

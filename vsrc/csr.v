@@ -1,5 +1,5 @@
 `include "include.v"
-module CSRU(
+module ysyx_20020207_CSRU(
   input clk, wen,
   input[2:0] csr_ctl,
   input [11:0]csr_addr,

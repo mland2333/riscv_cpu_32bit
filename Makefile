@@ -2,10 +2,12 @@ TOPNAME = top
 NXDC_FILES = constr/top.nxdc
 INC_PATH += $(NPC_HOME)/csrc/include
 INC_PATH += $(NPC_HOME)/vsrc
+INC_PATH += $(YSYX_HOME)/ysyxSoC/perip/uart16550/rtl
+INC_PATH += $(YSYX_HOME)/ysyxSoC/perip/spi/rtl
 
 VERILATOR = verilator
 VERILATOR_CFLAGS += -MMD --build -cc  \
-				-O3 --x-assign fast --x-initial fast --noassert --trace 
+				-O3 --x-assign fast --x-initial fast --noassert --trace --timescale "1ns/1ns" --notiming
 
 BUILD_DIR = ./build
 OBJ_DIR = $(BUILD_DIR)/obj_dir
@@ -24,6 +26,7 @@ $(shell mkdir -p $(BUILD_DIR))
 CDIRS := $(shell find $(abspath ./csrc) -mindepth 1 -type d)
 
 # project source
+VSRCS += $(YSYX_HOME)/ysyxSoC/build/ysyxSoCFull.v
 VSRCS = $(shell find $(abspath ./vsrc) -name "*.v")
 CSRCS = $(shell find $(abspath $(CDIRS)) -name "*.c" -or -name "*.cc" -or -name "*.cpp")
 
@@ -66,7 +69,7 @@ LDFLAGS += -lSDL2
 $(BIN): $(VSRCS) $(CSRCS) #$(NVBOARD_ARCHIVE)
 	@rm -rf $(OBJ_DIR)
 	$(VERILATOR) $(VERILATOR_CFLAGS) \
-		--top-module $(TOPNAME) $^ \
+		--top-module ysyxSoCFull $^ \
 		$(addprefix -CFLAGS , $(CFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
 		$(INCFLAGS) --Mdir $(OBJ_DIR) --exe -o $(abspath $(BIN))
 

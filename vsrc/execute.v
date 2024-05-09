@@ -1,6 +1,6 @@
 `include "include.v"
 
-module EXU#(DATA_WIDTH = 32)(
+module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     input [6:0] op,
     input [2:0] func,
     input [DATA_WIDTH-1:0]src1, src2, imm, pc, csr_rdata,

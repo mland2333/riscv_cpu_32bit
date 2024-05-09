@@ -7,7 +7,7 @@
 #include "mem.h"
 #include "device.h"
 #include "ftrace.h"
-
+#include "verilated.h"
 #ifdef CONFIG_DIFFTEST
 
 #endif
@@ -27,6 +27,8 @@ extern void* vmem;
 #ifdef CONFIG_DIFFTEST
 extern bool npc_is_ref_skip_next;
 #endif
+extern "C" void flash_read(uint32_t addr, uint32_t *data) { assert(0); }
+extern "C" void mrom_read(uint32_t addr, uint32_t *data) { *data = 0x00100073; }
 
 extern "C" int pmem_read(int addr) {
   uint32_t raddr = (uint32_t)addr;
@@ -166,6 +168,7 @@ int main(int argc, char* argv[])
   {
     printf("%s\n", argv[i]);
   }*/
+  Verilated::commandArgs(argc, argv);
   sim_init();
   args_init(argc, argv);
   long img_size = mem_init(img_file);

@@ -52,7 +52,7 @@ module Logic_32bit(
 
 endmodule
 
-module ALU(
+module ysyx_20020207_ALU(
     input [31:0] a, b,
     input [3:0] alu_ctl,
     input sub, sign,

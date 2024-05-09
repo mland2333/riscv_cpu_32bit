@@ -1,15 +1,16 @@
-module ARBITER(
+module ysyx_20020207_ARBITER(
   input clk, rst,
   //读通道1
   input arvalid1, rready1,
   input [31:0] araddr1,
   output reg arready1, rvalid1,
   output reg[1:0] rresp1,
-  output reg[31:0] rdata1,
+  output reg[63:0] rdata1,
   //写通道1
   input awvalid1, wvalid1, bready1,
   input [7:0] wstrb1,
-  input [31:0] awaddr1, wdata1,
+  input [31:0] awaddr1, 
+  input [63:0] wdata1,
   output reg awready1, wready1, bvalid1,
   output reg[1:0] bresp1,
   //读通道2
@@ -17,19 +18,21 @@ module ARBITER(
   input [31:0] araddr2,
   output reg arready2, rvalid2,
   output reg[1:0] rresp2,
-  output reg[31:0] rdata2,
+  output reg[63:0] rdata2,
   //写通道2
   input awvalid2, wvalid2, bready2,
   input [7:0] wstrb2,
-  input [31:0] awaddr2, wdata2,
+  input [31:0] awaddr2,
+  input [63:0] wdata2,
   output reg awready2, wready2, bvalid2,
   output reg[1:0] bresp2,
   //与sram连接通道
   input arready, rvalid, awready, wready, bvalid,
   input [1:0] rresp, bresp,
-  input [31:0] rdata,
+  input [63:0] rdata,
   output reg arvalid, rready, awvalid, wvalid, bready, 
-  output reg[31:0] araddr, awaddr, wdata,
+  output reg[31:0] araddr, awaddr, 
+  output reg[63:0] wdata,
   output reg[7:0] wstrb
 );
 localparam IDLE_READ = 2'b00;

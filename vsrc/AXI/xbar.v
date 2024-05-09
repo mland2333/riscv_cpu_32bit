@@ -1,36 +1,40 @@
 `include "include.v"
 
-module XBAR(
+module ysyx_20020207_XBAR(
   //与axi-arbiter连接接口
   input  arvalid, rready, awvalid, wvalid, bready, 
-  input [31:0] araddr, awaddr, wdata,
+  input [31:0] araddr, awaddr,
+  input [63:0] wdata,
   input [7:0] wstrb,
   output reg arready, rvalid, awready, wready, bvalid,
   output reg [1:0] rresp, bresp,
-  output reg [31:0] rdata,
+  output reg [63:0] rdata,
   
-  //与sram连接接口
+  //与ysyxsoc sram连接接口
   input arready1, rvalid1, awready1, wready1, bvalid1,
   input [1:0] rresp1, bresp1,
-  input [31:0] rdata1,
+  input [63:0] rdata1,
   output reg arvalid1, rready1, awvalid1, wvalid1, bready1, 
-  output reg [31:0] araddr1, awaddr1, wdata1,
+  output reg [31:0] araddr1, awaddr1, 
+  output reg [63:0] wdata1,
   output reg [7:0] wstrb1,
   
-  //与uart接口
+  //与clint接口
   input arready2, rvalid2, awready2, wready2, bvalid2,
   input [1:0] rresp2, bresp2,
-  input [31:0] rdata2,
+  input [63:0] rdata2,
   output reg arvalid2, rready2, awvalid2, wvalid2, bready2, 
-  output reg [31:0] araddr2, awaddr2, wdata2,
+  output reg [31:0] araddr2, awaddr2, 
+  output reg [63:0] wdata2,
   output reg [7:0] wstrb2,
-
-  input arready3, rvalid3, awready3, wready3, bvalid3,
+  output reg high,
+  /*input arready3, rvalid3, awready3, wready3, bvalid3,
   input [1:0] rresp3, bresp3,
-  input [31:0] rdata3,
+  input [63:0] rdata3,
   output reg arvalid3, rready3, awvalid3, wvalid3, bready3, high, 
-  output reg [31:0] araddr3, awaddr3, wdata3,
-  output reg [7:0] wstrb3,
+  output reg [31:0] araddr3, awaddr3,
+  output reg [63:0] wdata3,
+  output reg [7:0] wstrb3,*/
 
   output diff_skip
 );
@@ -93,6 +97,15 @@ always@(*)begin
       rdata = rdata1;
     end
     UART_ZONE:begin
+      arvalid1 = arvalid;
+      rready1 = rready;
+      araddr1 = araddr;
+      arready = arready1;
+      rvalid = rvalid1;
+      rresp = rresp1;
+      rdata = rdata1;
+    end
+    RTC_ZONE:begin
       arvalid2 = arvalid;
       rready2 = rready;
       araddr2 = araddr;
@@ -101,7 +114,7 @@ always@(*)begin
       rresp = rresp2;
       rdata = rdata2;
     end
-    RTC_ZONE:begin
+    /*RTC_ZONE:begin
       arvalid3 = arvalid;
       rready3 = rready;
       araddr3 = araddr;
@@ -109,7 +122,7 @@ always@(*)begin
       rvalid = rvalid3;
       rresp = rresp3;
       rdata = rdata3;
-    end
+    end*/
     default:begin
       arvalid1 = 0;
       rready1 = 0;
@@ -140,6 +153,18 @@ always@(*)begin
       bresp = bresp1;
     end
     UART_ZONE:begin
+      awvalid1 = awvalid;
+      wvalid1 = wvalid;
+      bready1 = bready;
+      awaddr1 = awaddr;
+      wdata1 = wdata;
+      wstrb1 = wstrb;
+      awready = awready1;
+      wready = wready1;
+      bvalid = bvalid1;
+      bresp = bresp1;
+    end
+    RTC_ZONE:begin
       awvalid2 = awvalid;
       wvalid2 = wvalid;
       bready2 = bready;
@@ -151,7 +176,7 @@ always@(*)begin
       bvalid = bvalid2;
       bresp = bresp2;
     end
-    RTC_ZONE:begin
+    /*RTC_ZONE:begin
       awvalid3 = awvalid;
       wvalid3 = wvalid;
       bready3 = bready;
@@ -162,7 +187,7 @@ always@(*)begin
       wready = wready3;
       bvalid = bvalid3;
       bresp = bresp3;
-    end
+    end*/
     default:begin
       awvalid1 = 0;
       wvalid1 = 0;
@@ -176,12 +201,12 @@ always@(*)begin
       awaddr2 = 0;
       wdata2 = 0;
       wstrb2 = 0;
-      awvalid3 = 0;
+      /*awvalid3 = 0;
       wvalid3 = 0;
       bready3 = 0;
       awaddr3 = 0;
       wdata3 = 0;
-      wstrb3 = 0;
+      wstrb3 = 0;*/
       awready = 0;
       wready = 0;
       bvalid = 0;

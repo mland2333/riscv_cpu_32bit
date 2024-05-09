@@ -1,4 +1,4 @@
-module RegisterFile #(ADDR_WIDTH = 1, DATA_WIDTH = 1) (
+module ysyx_20020207_RegisterFile #(ADDR_WIDTH = 1, DATA_WIDTH = 1) (
   input clk, lsu_finish,
   output [DATA_WIDTH-1:0] rdata1,
   input [ADDR_WIDTH-1:0] raddr1,
