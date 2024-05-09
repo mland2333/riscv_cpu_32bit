@@ -7,7 +7,7 @@ INC_PATH += $(YSYX_HOME)/ysyxSoC/perip/spi/rtl
 
 VERILATOR = verilator
 VERILATOR_CFLAGS += -MMD --build -cc  \
-				-O3 --x-assign fast --x-initial fast --noassert --trace --timescale "1ns/1ns" --notiming
+				-O3 --x-assign fast --x-initial fast --noassert --trace --timescale "1ns/1ns" --notiming --autoflush
 
 BUILD_DIR = ./build
 OBJ_DIR = $(BUILD_DIR)/obj_dir

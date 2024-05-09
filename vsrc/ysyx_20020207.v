@@ -141,6 +141,7 @@ assign  io_master_awid      =   'b0       ,
     wire reg_wen;
     ysyx_20020207_RegisterFile #(5, DATA_WIDTH) mreg(
       .clk(clock),
+      .rst(reset),
       .lsu_finish(lsu_finish),
       .rdata1(src1),
       .raddr1(rs1),

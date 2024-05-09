@@ -97,11 +97,11 @@ always@(posedge clk)begin
   if(rst)begin
     awvalid <= 0;
     write_wait_ready <= 0;
-    bready <= 0;
+    bready <= 1;
   end
   else begin
     if(!write_wait_ready && wen)begin
-        bready <= 0;
+        //bready <= 0;
         if(inst_rvalid)begin
           awvalid <= wen;
           wvalid <= wen;
@@ -112,14 +112,10 @@ always@(posedge clk)begin
         if(io_master_wready)begin
           awvalid <= 0;
           wvalid <= 0;
-          bready <= 1;
           write_wait_ready <= 0;
         end
         else if(io_master_awvalid && io_master_awready)begin
           awvalid <= 0;
-        end
-        else begin
-          bready <= 0;
         end
       end
   end

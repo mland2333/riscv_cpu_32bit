@@ -22,6 +22,7 @@ always@(posedge clk)begin
   if(rst)begin
     inst <= 0;
     inst_valid <= 0;
+    io_master_rready <= 1;
   end
   else if(io_master_rvalid)begin
     inst <= io_master_rdata[31:0];

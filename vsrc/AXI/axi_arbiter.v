@@ -125,12 +125,12 @@ always@(posedge clk)begin
         end
       end
       MEM1_WRITE:begin
-        if(wready)begin
+        if(bvalid && bready)begin
           write_state <= IDLE_WRITE;
         end
       end
       MEM2_WRITE:begin
-        if(wready)begin
+        if(bvalid && bready)begin
           write_state <= IDLE_WRITE;
         end
       end
