@@ -28,7 +28,9 @@ extern void* vmem;
 extern bool npc_is_ref_skip_next;
 #endif
 extern "C" void flash_read(uint32_t addr, uint32_t *data) { assert(0); }
-extern "C" void mrom_read(uint32_t addr, uint32_t *data) { *data = 0x00100073; }
+extern "C" void mrom_read(uint32_t addr, uint32_t *data) { 
+  *data = vmem_read(addr, 4); 
+}
 
 extern "C" int pmem_read(int addr) {
   uint32_t raddr = (uint32_t)addr;
@@ -188,7 +190,7 @@ int main(int argc, char* argv[])
   extern void sdl_clear_event_queue();
   sdl_clear_event_queue();
 #endif
-  reset(2);
+  reset(10);
   cpu_update();
 #ifdef CONFIG_DIFFTEST
   void init_difftest(char *ref_so_file, long img_size, int port);

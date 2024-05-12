@@ -106,7 +106,12 @@ int exec_once(){
   cpu_update();
   extern int difftest_step();
   extern bool npc_is_ref_skip_next;
-  npc_is_ref_skip_next = top->diff_skip == 1 ? 1 : npc_is_ref_skip_next;
+  extern bool npc_is_ref_skip;
+  npc_is_ref_skip_next = top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__is_diff_skip;
+  if(top->reset){
+    npc_is_ref_skip_next = 1;
+    npc_is_ref_skip = 1;
+  }
   if(top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__lsu_finish&& (difftest_step()==-1)) return -1;
 #endif
   return top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__is_exit;

@@ -11,7 +11,7 @@
 `define IFU_WAIT_READY 2'b10
 
 `define DEVICE_BASE 32'ha0000000
-`define UART 32'ha00003f8
+`define UART 32'h10000000
 `define RTC_ADDR 32'ha0000048
 `define RTC_ADDR_HIGH 32'ha000004c
 

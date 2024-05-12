@@ -10,7 +10,6 @@ module ysyx_20020207_RegisterFile #(ADDR_WIDTH = 1, DATA_WIDTH = 1) (
 );
   reg [DATA_WIDTH-1:0] rf [2**ADDR_WIDTH-1:0];
   always @(posedge clk) begin
-    if(rst) rf[2] <= 32'h0f100000;
     if (lsu_finish && wen && waddr!=0) rf[waddr] <= wdata;
   end
   always @(*)begin

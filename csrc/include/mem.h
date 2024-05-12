@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#define CONFIG_MBASE 0x80000000
+#define CONFIG_MBASE 0x20000000
 #define CONFIG_MSIZE 0x8000000
 extern void* mem;
 #define v_to_p(addr) (((uint64_t)addr - (uint64_t)CONFIG_MBASE) + (uint64_t)mem)

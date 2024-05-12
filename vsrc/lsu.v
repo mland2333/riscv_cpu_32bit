@@ -48,10 +48,10 @@ assign  io_master_arvalid   =   arvalid   ,
         io_master_awvalid   =   awvalid   ,
         io_master_wvalid    =   wvalid    ,
         io_master_bready    =   bready    ,
-        io_master_wstrb     =   wmask     ,
+        io_master_wstrb     =   wstrb     ,
         io_master_araddr    =   raddr     ,
         io_master_awaddr    =   waddr     ,
-        io_master_wdata     =   {32'b0, wdata} /*    ,
+        io_master_wdata     =   _wdata /*    ,
         io_master_awid      =   'b0       ,
         io_master_awlen     =   'b0       ,
         io_master_awsize    =   'b0       ,
@@ -61,11 +61,74 @@ assign  io_master_arvalid   =   arvalid   ,
         io_master_arlen     =   'b0       ,
         io_master_arsize    =   'b0       ,
         io_master_arburst   =   'b0       */;
+reg[7:0] wstrb;
+reg[63:0] _wdata;
+always@(*)begin
+  case(io_master_awaddr[2:0])
+    3'b000:begin
+      wstrb = wmask;
+      _wdata = {32'b0, wdata};
+    end
+    3'b001:begin
+      wstrb = {wmask[6:0], 1'b0};
+      _wdata = {24'b0, wdata, 8'b0};
+    end
+    3'b010:begin
+      wstrb = {wmask[5:0], 2'b0};
+      _wdata = {16'b0, wdata, 16'b0};
+    end
+    3'b011:begin
+      wstrb = {wmask[4:0], 3'b0};
+      _wdata = {8'b0, wdata, 24'b0};
+    end
+    3'b100:begin
+      wstrb = {wmask[3:0], 4'b0};
+      _wdata = {wdata, 32'b0};
+    end
+    3'b101:begin
+      wstrb = {wmask[2:0], 5'b0};
+      _wdata = {wdata[23:0], 40'b0};
+    end
+    3'b110:begin
+      wstrb = {wmask[1:0], 6'b0};
+      _wdata = {wdata[15:0], 48'b0};
+    end
+    3'b111:begin
+      wstrb = {wmask[0], 7'b0};
+      _wdata = {wdata[7:0], 56'b0};
+    end
+  endcase
+end
 
 reg[31:0] _rdata;
 always@(posedge clk)begin
   if(io_master_rvalid)begin
-    _rdata <= io_master_rdata[31:0];
+    case(io_master_araddr[2:0])
+      3'b000:begin
+        _rdata = io_master_rdata[31:0];
+      end
+      3'b001:begin
+        _rdata = io_master_rdata[39:8];
+      end
+      3'b010:begin
+        _rdata = io_master_rdata[47:16];
+      end
+      3'b011:begin
+        _rdata = io_master_rdata[55:24];
+      end
+      3'b100:begin
+        _rdata = io_master_rdata[63:32];
+      end
+      3'b101:begin
+        _rdata = {8'b0, io_master_rdata[63:40]};
+      end
+      3'b110:begin
+        _rdata = {16'b0, io_master_rdata[63:48]};
+      end
+      3'b111:begin
+        _rdata = {24'b0, io_master_rdata[63:56]};
+      end
+    endcase
   end
 end
 
@@ -75,6 +138,7 @@ always@(posedge clk)begin
   if(rst)begin
     arvalid <= 0;
     read_wait_ready <= 0;
+    rready <= 1;
   end
   else begin
     if(!read_wait_ready && ren)begin
@@ -109,20 +173,20 @@ always@(posedge clk)begin
         end
       end
     else begin
-        if(io_master_wready)begin
+        if(io_master_bvalid)begin
           awvalid <= 0;
           wvalid <= 0;
           write_wait_ready <= 0;
         end
-        else if(io_master_awvalid && io_master_awready)begin
+        /*else if(io_master_awvalid && io_master_awready)begin
           awvalid <= 0;
-        end
+        end*/
       end
   end
 end
 
 always@(posedge clk)begin
-  lsu_finish <= (~lsu_finish) && ((inst_rvalid & ~wen &~ren) || wen&io_master_wready || ren&io_master_rvalid);
+  lsu_finish <= (~lsu_finish) && ((inst_rvalid & ~wen &~ren) || wen&io_master_bvalid || ren&io_master_rvalid);
 end
 
 

@@ -73,17 +73,22 @@ module ysyx_20020207 #(DATA_WIDTH = 32)(
 wire [DATA_WIDTH-1 : 0] inst;                       
 reg[DATA_WIDTH-1 : 0] pc, upc;                 
 wire [31:0] result;                               
-reg mem_wen, jump, lsu_finish, diff_skip;
+reg mem_wen, jump, lsu_finish, is_diff_skip;
+wire diff_skip;
+
+always@(posedge clock)begin
+  is_diff_skip <= diff_skip;
+end
 
 assign  io_master_awid      =   'b0       ,
         io_master_awlen     =   'b0       ,
-        io_master_awsize    =   'b0       ,
-        io_master_awburst   =   'b0       ,
-        io_master_wlast     =   'b0       ,
+        io_master_awsize    =   'b010       ,
+        io_master_awburst   =   'b01       ,
+        io_master_wlast     =   1       ,
         io_master_arid      =   'b0       ,
         io_master_arlen     =   'b0       ,
-        io_master_arsize    =   'b0       ,
-        io_master_arburst   =   'b0       ;
+        io_master_arsize    =   'b010       ,
+        io_master_arburst   =   'b01       ;
 
     wire pc_wen;
 
