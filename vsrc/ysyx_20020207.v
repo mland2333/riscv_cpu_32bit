@@ -83,12 +83,12 @@ end
 assign  io_master_awid      =   'b0       ,
         io_master_awlen     =   'b0       ,
         io_master_awsize    =   'b010       ,
-        io_master_awburst   =   'b01       ,
+        io_master_awburst   =   'b0       ,
         io_master_wlast     =   1       ,
         io_master_arid      =   'b0       ,
         io_master_arlen     =   'b0       ,
         io_master_arsize    =   'b010       ,
-        io_master_arburst   =   'b01       ;
+        io_master_arburst   =   'b0       ;
 
     wire pc_wen;
 

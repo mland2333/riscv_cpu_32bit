@@ -37,20 +37,25 @@ module ysyx_20020207_LSU(
   output io_master_rready,
   input  io_master_rvalid,
   input  [1:0] io_master_rresp,
-  input  [63:0] io_master_rdata//,
-  //input  io_master_rlast,
+  input  [63:0] io_master_rdata
+  //input  io_master_rlast
   //input  [3:0] io_master_rid,
 );
-reg arvalid, rready, awvalid, wvalid, bready;
+localparam IDLE = 2'b00;
+localparam TRAN1 = 2'b01;
+localparam TRAN2 = 2'b10;
+localparam MID = 2'b11;
 
+reg arvalid, rready, awvalid, wvalid, bready;
+reg[7:0] _wstrb;
 assign  io_master_arvalid   =   arvalid   ,
         io_master_rready    =   rready    ,
         io_master_awvalid   =   awvalid   ,
         io_master_wvalid    =   wvalid    ,
         io_master_bready    =   bready    ,
-        io_master_wstrb     =   wstrb     ,
-        io_master_araddr    =   raddr     ,
-        io_master_awaddr    =   waddr     ,
+        io_master_wstrb     =   _wstrb     ,
+        //io_master_araddr    =   {raddr[31:3], 3'b0}     ,
+        //io_master_awaddr    =   {waddr[31:3], 3'b0}     ,
         io_master_wdata     =   _wdata /*    ,
         io_master_awid      =   'b0       ,
         io_master_awlen     =   'b0       ,
@@ -61,10 +66,13 @@ assign  io_master_arvalid   =   arvalid   ,
         io_master_arlen     =   'b0       ,
         io_master_arsize    =   'b0       ,
         io_master_arburst   =   'b0       */;
-reg[7:0] wstrb;
+reg[7:0] wstrb, wstrb1;
 reg[63:0] _wdata;
+reg w_tran_nums;
 always@(*)begin
-  case(io_master_awaddr[2:0])
+  w_tran_nums = 0;
+  wstrb1 = 0;
+  case(waddr[2:0])
     3'b000:begin
       wstrb = wmask;
       _wdata = {32'b0, wdata};
@@ -87,106 +95,191 @@ always@(*)begin
     end
     3'b101:begin
       wstrb = {wmask[2:0], 5'b0};
-      _wdata = {wdata[23:0], 40'b0};
+      _wdata = {wdata[23:0], 32'b0, wdata[31:24]};
+      if(wmask[3])begin
+        w_tran_nums = 1;
+        wstrb1 = {3'b0, wmask[7:3]};
+      end
     end
     3'b110:begin
       wstrb = {wmask[1:0], 6'b0};
-      _wdata = {wdata[15:0], 48'b0};
+      _wdata = {wdata[15:0], 32'b0, wdata[31:16]};
+      if(wmask[3])begin
+        w_tran_nums = 1;
+        wstrb1 = {2'b0, wmask[7:2]};
+      end
     end
     3'b111:begin
-      wstrb = {wmask[0], 7'b0};
-      _wdata = {wdata[7:0], 56'b0};
+      wstrb = {wmask[0], 7'b0 };
+      _wdata = {wdata[7:0], 32'b0, wdata[31:8]};
+      if(wmask[1])begin
+        w_tran_nums = 1;
+        wstrb1 = {1'b0, wmask[7:1]};
+      end
     end
   endcase
 end
 
 reg[31:0] _rdata;
+reg[63:0] _rdata0, _rdata1;
+reg r_tran_nums;
+always@(*)begin
+  r_tran_nums = 0;
+  case(raddr[2:0])
+    3'b000:begin
+      _rdata = _rdata0[31:0];
+    end
+    3'b001:begin
+      _rdata = _rdata0[39:8];
+    end
+    3'b010:begin
+      _rdata = _rdata0[47:16];
+    end
+    3'b011:begin
+      _rdata = _rdata0[55:24];
+    end
+    3'b100:begin
+      _rdata = _rdata0[63:32];
+    end
+    3'b101:begin
+      if(load_ctl[1])begin
+        r_tran_nums = 1;
+        _rdata = {_rdata0[7:0], _rdata1[63:40]};
+      end
+      else begin
+        r_tran_nums = 0;
+        _rdata = {8'b0, _rdata0[63:40]};
+      end
+    end
+    3'b110:begin
+      if(load_ctl[1])begin
+        r_tran_nums = 1;
+        _rdata = {_rdata0[15:0], _rdata1[63:48]};
+      end
+      else begin
+        r_tran_nums = 0;
+        _rdata = {16'b0, _rdata0[63:48]};
+      end
+    end
+    3'b111:begin
+      if(load_ctl[1] || load_ctl[0])begin
+        r_tran_nums = 1;
+        _rdata = {_rdata0[23:0], _rdata1[63:56]};
+      end
+      else begin
+        r_tran_nums = 0;
+        _rdata = {24'b0, _rdata0[63:56]};
+      end
+    end
+  endcase
+end
+
+reg read_wait_ready, write_wait_ready;
+reg[1:0] read_state;
+//load
 always@(posedge clk)begin
-  if(io_master_rvalid)begin
-    case(io_master_araddr[2:0])
-      3'b000:begin
-        _rdata = io_master_rdata[31:0];
+  if(rst)begin
+    arvalid <= 0;
+    read_state <= IDLE;
+    rready <= 1;
+  end
+  else begin
+    case(read_state)
+      IDLE:begin
+        if(ren && inst_rvalid)begin
+          arvalid <= 1;
+          io_master_araddr <= raddr;
+          if(r_tran_nums == 1)
+            read_state <= TRAN2;
+          else 
+            read_state <= TRAN1;
+        end
       end
-      3'b001:begin
-        _rdata = io_master_rdata[39:8];
+      TRAN1:begin
+        if(io_master_arvalid && io_master_arready)
+          arvalid <= 0;
+        if(io_master_rvalid)begin
+          arvalid <= 0;
+          read_state <= IDLE;
+          _rdata0 <= io_master_rdata;
+        end
       end
-      3'b010:begin
-        _rdata = io_master_rdata[47:16];
+      TRAN2:begin
+        if(io_master_arvalid && io_master_arready)
+          arvalid <= 0;
+        if(io_master_rvalid)begin
+          arvalid <= 0;
+          read_state <= MID;
+          _rdata1 <= io_master_rdata;
+        end
       end
-      3'b011:begin
-        _rdata = io_master_rdata[55:24];
+      MID:begin
+          io_master_araddr <= io_master_araddr + 8;
+          arvalid <= 1;
+          read_state <= TRAN1;
       end
-      3'b100:begin
-        _rdata = io_master_rdata[63:32];
+    endcase
+  end
+end
+//store
+reg[1:0] write_state;
+always@(posedge clk)begin
+  if(rst)begin
+    awvalid <= 0;
+    write_state <= IDLE;
+    bready <= 1;
+  end
+  else begin
+    case(write_state)
+      IDLE:begin
+        if(wen && inst_rvalid)begin
+          awvalid <= wen;
+          wvalid <= wen;
+          io_master_awaddr <= waddr;
+          _wstrb <= wstrb;
+          if(w_tran_nums == 1)
+            write_state <= TRAN2;
+          else
+            write_state <= TRAN1;
+        end
       end
-      3'b101:begin
-        _rdata = {8'b0, io_master_rdata[63:40]};
+      TRAN1:begin
+        if(io_master_awvalid && io_master_awready)
+          awvalid <= 0;
+        if(io_master_wvalid && io_master_wready)
+          wvalid <= 0;
+        if(io_master_bvalid)begin
+          awvalid <= 0;
+          wvalid <= 0;
+          write_state <= IDLE;
+        end
       end
-      3'b110:begin
-        _rdata = {16'b0, io_master_rdata[63:48]};
+      TRAN2:begin
+        if(io_master_awvalid && io_master_awready)
+          awvalid <= 0;
+        if(io_master_wvalid && io_master_wready)
+          wvalid <= 0;
+        if(io_master_bvalid)begin
+          awvalid <= 0;
+          wvalid <= 0;
+          write_state <= MID;
+        end
       end
-      3'b111:begin
-        _rdata = {24'b0, io_master_rdata[63:56]};
+      MID:begin
+        io_master_awaddr <= io_master_awaddr + 8;
+        awvalid <= 1;
+        wvalid <= 1;
+        _wstrb <= wstrb1;
+        write_state <= TRAN1;
       end
     endcase
   end
 end
 
-reg read_wait_ready, write_wait_ready;
-//load
 always@(posedge clk)begin
-  if(rst)begin
-    arvalid <= 0;
-    read_wait_ready <= 0;
-    rready <= 1;
-  end
-  else begin
-    if(!read_wait_ready && ren)begin
-        if(inst_rvalid)begin
-          arvalid <= ren;
-          read_wait_ready <= 1;
-        end
-    end
-    else begin
-        if(io_master_arvalid && io_master_arready)begin
-          arvalid <= 0;
-          read_wait_ready <= 0;
-        end
-    end
-  end
-end
-
-//store
-always@(posedge clk)begin
-  if(rst)begin
-    awvalid <= 0;
-    write_wait_ready <= 0;
-    bready <= 1;
-  end
-  else begin
-    if(!write_wait_ready && wen)begin
-        //bready <= 0;
-        if(inst_rvalid)begin
-          awvalid <= wen;
-          wvalid <= wen;
-          write_wait_ready <= 1;
-        end
-      end
-    else begin
-        if(io_master_bvalid)begin
-          awvalid <= 0;
-          wvalid <= 0;
-          write_wait_ready <= 0;
-        end
-        /*else if(io_master_awvalid && io_master_awready)begin
-          awvalid <= 0;
-        end*/
-      end
-  end
-end
-
-always@(posedge clk)begin
-  lsu_finish <= (~lsu_finish) && ((inst_rvalid & ~wen &~ren) || wen&io_master_bvalid || ren&io_master_rvalid);
+  lsu_finish <= (~lsu_finish) && ((inst_rvalid & ~wen &~ren)
+                || wen&&io_master_bvalid&&(write_state==TRAN1)
+                || ren&&io_master_rvalid&&(read_state ==TRAN1));
 end
 
 
