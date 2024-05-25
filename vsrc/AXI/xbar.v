@@ -48,39 +48,30 @@ reg[1:0] write_zone;
 always@(*)begin
   read_zone = SRAM_ZONE;
   high = 0;
-  case(araddr)
-    `UART:begin
-      read_zone = UART_ZONE;
-    end
-    `RTC_ADDR:begin
-      read_zone = RTC_ZONE;
-    end
-    `RTC_ADDR_HIGH:begin
-      read_zone = RTC_ZONE;
-      high = 1;
-    end
-    default:begin
-      read_zone = SRAM_ZONE;
-    end
-  endcase
+  if(araddr >= `UART && araddr < `UART + 32'h0fff)
+    read_zone = UART_ZONE;
+  else if(araddr == `RTC_ADDR)
+    read_zone = RTC_ZONE;
+  else if(araddr == `RTC_ADDR_HIGH)begin
+    read_zone = RTC_ZONE;
+    high = 1;
+  end
+  else
+    read_zone = SRAM_ZONE;
 end
+
 
 always@(*)begin
   write_zone = SRAM_ZONE;
-  case(awaddr)
-    `UART:begin
-      write_zone = UART_ZONE;
-    end
-    `RTC_ADDR:begin
-      write_zone = RTC_ZONE;
-    end
-    `RTC_ADDR_HIGH:begin
-      write_zone = RTC_ZONE;
-    end
-    default:begin
-      write_zone = SRAM_ZONE;
-    end
-  endcase
+  if(awaddr >= `UART && araddr < `UART + 32'h0fff)
+    write_zone = UART_ZONE;
+  else if(awaddr == `RTC_ADDR)
+    write_zone = RTC_ZONE;
+  else if(awaddr == `RTC_ADDR_HIGH)begin
+    write_zone = RTC_ZONE;
+  end
+  else
+    write_zone = SRAM_ZONE;
 end
 
 assign diff_skip = read_zone != SRAM_ZONE || write_zone != SRAM_ZONE;
