@@ -42,13 +42,13 @@ module ysyx_20020207_XBAR(
 localparam SRAM_ZONE = 2'b00;
 localparam UART_ZONE = 2'b01;
 localparam RTC_ZONE = 2'b10;
-
+localparam FLASH_ZONE = 2'b11;
 reg[1:0] read_zone;
 reg[1:0] write_zone;
 always@(*)begin
   read_zone = SRAM_ZONE;
   high = 0;
-  if(araddr >= `UART && araddr < `UART + 32'h0fff)
+  if(araddr >= `UART && araddr < `UART + 32'h1000)
     read_zone = UART_ZONE;
   else if(araddr == `RTC_ADDR)
     read_zone = RTC_ZONE;
@@ -56,6 +56,8 @@ always@(*)begin
     read_zone = RTC_ZONE;
     high = 1;
   end
+  else if(araddr >= `FLASH_BASE && araddr < `FLASH_BASE + `FLASH_SIZE)
+    read_zone = FLASH_ZONE;
   else
     read_zone = SRAM_ZONE;
 end
@@ -70,6 +72,8 @@ always@(*)begin
   else if(awaddr == `RTC_ADDR_HIGH)begin
     write_zone = RTC_ZONE;
   end
+  else if(awaddr >= `FLASH_BASE && awaddr < `FLASH_BASE + `FLASH_SIZE)
+    write_zone = FLASH_ZONE;
   else
     write_zone = SRAM_ZONE;
 end
@@ -77,136 +81,77 @@ end
 assign diff_skip = read_zone != SRAM_ZONE || write_zone != SRAM_ZONE;
 
 always@(*)begin
-  case(read_zone)
-    SRAM_ZONE:begin
-      arvalid1 = arvalid;
-      rready1 = rready;
-      araddr1 = araddr;
-      arready = arready1;
-      rvalid = rvalid1;
-      rresp = rresp1;
-      rdata = rdata1;
-    end
-    UART_ZONE:begin
-      arvalid1 = arvalid;
-      rready1 = rready;
-      araddr1 = araddr;
-      arready = arready1;
-      rvalid = rvalid1;
-      rresp = rresp1;
-      rdata = rdata1;
-    end
-    RTC_ZONE:begin
-      arvalid2 = arvalid;
-      rready2 = rready;
-      araddr2 = araddr;
-      arready = arready2;
-      rvalid = rvalid2;
-      rresp = rresp2;
-      rdata = rdata2;
-    end
-    /*RTC_ZONE:begin
-      arvalid3 = arvalid;
-      rready3 = rready;
-      araddr3 = araddr;
-      arready = arready3;
-      rvalid = rvalid3;
-      rresp = rresp3;
-      rdata = rdata3;
-    end*/
-    default:begin
-      arvalid1 = 0;
-      rready1 = 0;
-      araddr1 = 0;
-      arvalid2 = 0;
-      rready2 = 0;
-      araddr2 = 0;
-      arready = 0;
-      rvalid = 0;
-      rresp = 0;
-      rdata = 0;
-    end
-  endcase
+  arvalid1 = 0;
+  rready1 = 0;
+  araddr1 = 0;
+  arvalid2 = 0;
+  rready2 = 0;
+  araddr2 = 0;
+  arready = 0;
+  rvalid = 0;
+  rresp = 0;
+  rdata = 0;
+  if(read_zone == RTC_ZONE)begin
+    arvalid2 = arvalid;
+    rready2 = rready;
+    araddr2 = araddr;
+    arready = arready2;
+    rvalid = rvalid2;
+    rresp = rresp2;
+    rdata = rdata2;
+  end
+  else begin
+    arvalid1 = arvalid;
+    rready1 = rready;
+    araddr1 = araddr;
+    arready = arready1;
+    rvalid = rvalid1;
+    rresp = rresp1;
+    rdata = rdata1;
+  end
 end
 
 always@(*)begin
-  case(write_zone)
-    SRAM_ZONE:begin
-      awvalid1 = awvalid;
-      wvalid1 = wvalid;
-      bready1 = bready;
-      awaddr1 = awaddr;
-      wdata1 = wdata;
-      wstrb1 = wstrb;
-      awready = awready1;
-      wready = wready1;
-      bvalid = bvalid1;
-      bresp = bresp1;
-    end
-    UART_ZONE:begin
-      awvalid1 = awvalid;
-      wvalid1 = wvalid;
-      bready1 = bready;
-      awaddr1 = awaddr;
-      wdata1 = wdata;
-      wstrb1 = wstrb;
-      awready = awready1;
-      wready = wready1;
-      bvalid = bvalid1;
-      bresp = bresp1;
-    end
-    RTC_ZONE:begin
-      awvalid2 = awvalid;
-      wvalid2 = wvalid;
-      bready2 = bready;
-      awaddr2 = awaddr;
-      wdata2 = wdata;
-      wstrb2 = wstrb;
-      awready = awready2;
-      wready = wready2;
-      bvalid = bvalid2;
-      bresp = bresp2;
-    end
-    /*RTC_ZONE:begin
-      awvalid3 = awvalid;
-      wvalid3 = wvalid;
-      bready3 = bready;
-      awaddr3 = awaddr;
-      wdata3 = wdata;
-      wstrb3 = wstrb;
-      awready = awready3;
-      wready = wready3;
-      bvalid = bvalid3;
-      bresp = bresp3;
-    end*/
-    default:begin
-      awvalid1 = 0;
-      wvalid1 = 0;
-      bready1 = 0;
-      awaddr1 = 0;
-      wdata1 = 0;
-      wstrb1 = 0;
-      awvalid2 = 0;
-      wvalid2 = 0;
-      bready2 = 0;
-      awaddr2 = 0;
-      wdata2 = 0;
-      wstrb2 = 0;
-      /*awvalid3 = 0;
-      wvalid3 = 0;
-      bready3 = 0;
-      awaddr3 = 0;
-      wdata3 = 0;
-      wstrb3 = 0;*/
-      awready = 0;
-      wready = 0;
-      bvalid = 0;
-      bresp = 0;
-    end
-  endcase
+  awvalid1 = 0;
+  wvalid1 = 0;
+  bready1 = 0;
+  awaddr1 = 0;
+  wdata1 = 0;
+  wstrb1 = 0;
+  awvalid2 = 0;
+  wvalid2 = 0;
+  bready2 = 0;
+  awaddr2 = 0;
+  wdata2 = 0;
+  wstrb2 = 0;
+  awready = 0;
+  wready = 0;
+  bvalid = 0;
+  bresp = 0;
+  if(write_zone == RTC_ZONE)begin
+    awvalid2 = awvalid;
+    wvalid2 = wvalid;
+    bready2 = bready;
+    awaddr2 = awaddr;
+    wdata2 = wdata;
+    wstrb2 = wstrb;
+    awready = awready2;
+    wready = wready2;
+    bvalid = bvalid2;
+    bresp = bresp2;
+  end
+  else begin
+    awvalid1 = awvalid;
+    wvalid1 = wvalid;
+    bready1 = bready;
+    awaddr1 = awaddr;
+    wdata1 = wdata;
+    wstrb1 = wstrb;
+    awready = awready1;
+    wready = wready1;
+    bvalid = bvalid1;
+    bresp = bresp1;
+  end
 end
-
-
-
 
 endmodule
