@@ -114,7 +114,14 @@ int exec_once(){
   }
   if(top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__lsu_finish&& (difftest_step()==-1)) return -1;
 #endif
-  return top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__is_exit;
+  int is_exit;
+  if(top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__is_exit){
+    if(cpu.gpr[10] == 1)
+      return -1;
+    else 
+      return 1;
+  }
+  return 0;
 }
 
 int cmd_c(char* args) {

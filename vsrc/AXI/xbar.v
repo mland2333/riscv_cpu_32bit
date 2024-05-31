@@ -58,8 +58,10 @@ always@(*)begin
   end
   else if(araddr >= `FLASH_BASE && araddr < `FLASH_BASE + `FLASH_SIZE)
     read_zone = FLASH_ZONE;
-  else
+  else if(araddr >= `SRAM_BASE && araddr < `SRAM_BASE + `SRAM_SIZE)
     read_zone = SRAM_ZONE;
+  else 
+    read_zone = 2'b11;
 end
 
 
@@ -74,8 +76,10 @@ always@(*)begin
   end
   else if(awaddr >= `FLASH_BASE && awaddr < `FLASH_BASE + `FLASH_SIZE)
     write_zone = FLASH_ZONE;
-  else
+  else if(awaddr >= `SRAM_BASE && awaddr < `SRAM_BASE + `SRAM_SIZE)
     write_zone = SRAM_ZONE;
+  else 
+    write_zone = 2'b11;
 end
 
 assign diff_skip = read_zone != SRAM_ZONE || write_zone != SRAM_ZONE;

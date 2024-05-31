@@ -59,7 +59,7 @@ assign  io_master_arvalid   =   arvalid   ,
         io_master_wstrb     =   _wstrb     ,
         //io_master_araddr    =   {raddr[31:3], 3'b0}     ,
         //io_master_awaddr    =   {waddr[31:3], 3'b0}     ,
-        io_master_wdata     =   is_write_sram ? _wdata_sram : {32'b0, wdata} /*    ,
+        io_master_wdata     =   _wdata_sram/*    ,
         io_master_awid      =   'b0       ,
         io_master_awlen     =   'b0       ,
         io_master_awsize    =   'b0       ,
@@ -239,15 +239,16 @@ always@(posedge clk)begin
           awvalid <= wen;
           wvalid <= wen;
           io_master_awaddr <= waddr;
+          _wstrb <= wstrb;
           if(is_write_sram)begin
-            _wstrb <= wstrb;
+            //_wstrb <= wstrb;
             if(w_tran_nums == 1)
               write_state <= TRAN2;
             else
               write_state <= TRAN1;
           end
           else begin
-            _wstrb <= wmask;
+            //_wstrb <= wmask;
             write_state <= TRAN1;
           end
         end
