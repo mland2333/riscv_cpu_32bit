@@ -34,7 +34,7 @@ extern bool npc_is_ref_skip_next;
 char* flash;
 
 extern "C" void flash_read(uint32_t addr, uint32_t *data) {
-  printf("flash addr = %x\n", addr);
+  //printf("flash addr = %x\n", addr);
   *data = *(uint32_t*)flash_addr(addr);
 }
 extern "C" void mrom_read(uint32_t addr, uint32_t *data) { 
@@ -43,9 +43,20 @@ extern "C" void mrom_read(uint32_t addr, uint32_t *data) {
 
 void flash_init(){
   flash = (char*)malloc(FLASH_SIZE);
-  uint32_t* flash32 = (uint32_t*)flash;
+
+  const char* char_test = "/home/mland/ysyx-workbench/npc/test/char-test.bin";
+  FILE *fp = fopen(char_test, "rb");
+
+  fseek(fp, 0, SEEK_END);
+  long size = ftell(fp);
+
+  fseek(fp, 0, SEEK_SET);
+  int ret = fread((void*)flash, size, 1, fp);
+  fclose(fp);
+
+  /*uint32_t* flash32 = (uint32_t*)flash;
   for(uint32_t i = 0; i < FLASH_SIZE / 4; i++)
-     flash32[i] = i;
+     flash32[i] = i;*/
 }
 
 extern "C" int pmem_read(int addr) {

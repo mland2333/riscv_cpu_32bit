@@ -18,6 +18,15 @@ reg wait_ready;
 
 assign io_master_araddr = pc;
 
+reg [31:0] _rdata;
+always@(*)begin
+  if(pc >= 32'h0f000000 && pc < 32'h0f002000 && pc[2] == 1)
+    _rdata = io_master_rdata[63:32];
+  else 
+    _rdata = io_master_rdata[31:0];
+end
+
+
 always@(posedge clk)begin
   if(rst)begin
     inst <= 0;
@@ -25,7 +34,7 @@ always@(posedge clk)begin
     io_master_rready <= 1;
   end
   else if(io_master_rvalid)begin
-    inst <= io_master_rdata[31:0];
+    inst <= _rdata;
     inst_valid <= 1;
   end
   else begin
