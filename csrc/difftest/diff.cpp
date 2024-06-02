@@ -12,7 +12,7 @@ void (*difftest_memcpy)(uint64_t addr, void *buf, size_t n, bool direction) = NU
 void (*difftest_regcpy)(void *dut, bool direction) = NULL;
 void (*difftest_exec)(uint64_t n) = NULL;
 void (*difftest_raise_intr)(uint64_t NO) = NULL;
-
+extern char* flash;
 int icount = 0;
 bool npc_is_ref_skip = false;
 bool npc_is_ref_skip_next = false;
@@ -34,7 +34,7 @@ void init_difftest(char *ref_so_file, long img_size, int port)
   void (*difftest_init)(int) = reinterpret_cast<void (*)(int)>(dlsym(handle, "difftest_init"));
 
   difftest_init(port);
-  difftest_memcpy(CONFIG_MBASE, (void*)v_to_p(CONFIG_MBASE), img_size, DIFFTEST_TO_REF);
+  difftest_memcpy(CONFIG_MBASE, (void*)flash, img_size, DIFFTEST_TO_REF);
   difftest_regcpy(&cpu, DIFFTEST_TO_REF);
 }
 

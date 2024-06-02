@@ -3,6 +3,35 @@
 #include <cstdio>
 #include <cstdlib>
 
+char* flash;
+
+
+extern "C" void flash_read(uint32_t addr, uint32_t *data) {
+  //printf("flash addr = %x\n", addr);
+  *data = *(uint32_t*)flash_addr(addr);
+}
+extern "C" void mrom_read(uint32_t addr, uint32_t *data) { 
+  *data = vmem_read(addr, 4); 
+}
+
+ long flash_init(char* img_file){
+  flash = (char*)malloc(FLASH_SIZE);
+
+  FILE *fp = fopen(img_file, "rb");
+
+  fseek(fp, 0, SEEK_END);
+  long size = ftell(fp);
+
+  fseek(fp, 0, SEEK_SET);
+  int ret = fread((void*)flash, size, 1, fp);
+  fclose(fp);
+  return size;
+  /*uint32_t* flash32 = (uint32_t*)flash;
+  for(uint32_t i = 0; i < FLASH_SIZE / 4; i++)
+     flash32[i] = i;*/
+}
+
+
 void* mem = nullptr;
 inline uint64_t mem_read(void *addr, int len) {
   switch (len) {
@@ -73,20 +102,24 @@ long mem_init(char* img_file) {
     printf("no img_file\n");
     return 20;
   }
-  mem = malloc(CONFIG_MSIZE);
-
-  FILE *fp = fopen(img_file, "rb");
-  // Assert(fp, "Can not open '%s'", img_file);
-
-  fseek(fp, 0, SEEK_END);
-  long size = ftell(fp);
-  //mem = malloc(size);
-  // Log("The image is %s, size = %ld", img_file, size);
-
-  fseek(fp, 0, SEEK_SET);
-  int ret = fread((void*)v_to_p(CONFIG_MBASE), size, 1, fp);
-  fclose(fp);
+  long size = flash_init(img_file);
+  /* mem = malloc(CONFIG_MSIZE); */
+  /**/
+  /* FILE *fp = fopen(img_file, "rb"); */
+  /* // Assert(fp, "Can not open '%s'", img_file); */
+  /**/
+  /* fseek(fp, 0, SEEK_END); */
+  /* long size = ftell(fp); */
+  /* //mem = malloc(size); */
+  /* // Log("The image is %s, size = %ld", img_file, size); */
+  /**/
+  /* fseek(fp, 0, SEEK_SET); */
+  /* int ret = fread((void*)v_to_p(CONFIG_MBASE), size, 1, fp); */
+  /* fclose(fp); */
   return size;
 }
+
+
+
 
 

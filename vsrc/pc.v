@@ -7,7 +7,7 @@ module ysyx_20020207_PC#(DATA_WIDTH) (
     //reg pc_wen;
     always@(posedge clk)begin
         //pc_wen <= wen;
-        if(rst) pc <= 32'h20000000;
+        if(rst) pc <= 32'h30000000;
         else if(wen) begin
           if(jump) pc <= upc;
           else pc <= pc + 4;
