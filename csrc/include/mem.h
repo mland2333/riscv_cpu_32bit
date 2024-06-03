@@ -10,6 +10,12 @@ extern char* flash;
 #define FLASH_BASE 0x30000000
 #define flash_addr(addr) ((uint64_t)addr + (uint64_t)flash)
 
+extern char* psram;
+#define PSRAM_SIZE 0x20000000
+#define PSRAM_BASE 0x80000000
+#define psram_addr(addr) ((uint64_t)addr + (uint64_t)psram)
+
+
 long mem_init(char* img_file);
 uint64_t vmem_read(uint32_t addr, int len);
 void mem_write(void *addr, int len, uint64_t data);

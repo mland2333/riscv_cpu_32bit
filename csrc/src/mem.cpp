@@ -4,7 +4,7 @@
 #include <cstdlib>
 
 char* flash;
-
+char* psram;
 
 extern "C" void flash_read(uint32_t addr, uint32_t *data) {
   //printf("flash addr = %x\n", addr);
@@ -12,6 +12,14 @@ extern "C" void flash_read(uint32_t addr, uint32_t *data) {
 }
 extern "C" void mrom_read(uint32_t addr, uint32_t *data) { 
   *data = vmem_read(addr, 4); 
+}
+
+extern "C" int psram_read(uint32_t addr) { 
+  return *(uint32_t*)psram_addr(addr);
+}
+
+extern "C" void psram_write(uint32_t addr, uint32_t data) { 
+  *(uint32_t*)psram_addr(addr) = data;
 }
 
  long flash_init(char* img_file){
@@ -31,6 +39,9 @@ extern "C" void mrom_read(uint32_t addr, uint32_t *data) {
      flash32[i] = i;*/
 }
 
+void psram_init(){
+  psram = (char*)malloc(PSRAM_SIZE);
+}
 
 void* mem = nullptr;
 inline uint64_t mem_read(void *addr, int len) {
@@ -102,6 +113,7 @@ long mem_init(char* img_file) {
     printf("no img_file\n");
     return 20;
   }
+  psram_init();
   long size = flash_init(img_file);
   /* mem = malloc(CONFIG_MSIZE); */
   /**/
