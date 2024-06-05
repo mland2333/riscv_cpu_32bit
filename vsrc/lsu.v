@@ -49,6 +49,8 @@ localparam MID = 2'b11;
 wire is_read_sram = raddr >= 32'h0f000000 && raddr < 32'h0f002000;
 wire is_write_sram = waddr >= 32'h0f000000 && waddr < 32'h0f002000;
 
+wire is_read_psram = raddr >= 32'h80000000 && raddr < 32'ha0000000;
+
 reg arvalid, rready, awvalid, wvalid, bready;
 reg[7:0] _wstrb;
 assign  io_master_arvalid   =   arvalid   ,
@@ -123,7 +125,7 @@ always@(*)begin
   endcase
 end
 
-reg[31:0] _rdata, _rdata_sram;
+reg[31:0] _rdata, _rdata_sram, _rdata_psram;
 reg[63:0] _rdata0, _rdata1;
 reg r_tran_nums;
 always@(*)begin
@@ -131,20 +133,26 @@ always@(*)begin
   case(raddr[2:0])
     3'b000:begin
       _rdata_sram = _rdata0[31:0];
+      _rdata_psram = _rdata0[31:0];
     end
     3'b001:begin
       _rdata_sram = _rdata0[39:8];
+      _rdata_psram = {8'b0, _rdata0[31:8]};
     end
     3'b010:begin
       _rdata_sram = _rdata0[47:16];
+      _rdata_psram = {16'b0, _rdata0[31:16]};
     end
     3'b011:begin
       _rdata_sram = _rdata0[55:24];
+      _rdata_psram = {24'b0, _rdata0[31:24]};
     end
     3'b100:begin
+      _rdata_psram = _rdata0[31:0];
       _rdata_sram = _rdata0[63:32];
     end
     3'b101:begin
+      _rdata_psram = {8'b0, _rdata0[31:8]};
       if(load_ctl[1])begin
         r_tran_nums = 1;
         _rdata_sram = {_rdata0[7:0], _rdata1[63:40]};
@@ -155,6 +163,7 @@ always@(*)begin
       end
     end
     3'b110:begin
+      _rdata_psram = {16'b0, _rdata0[31:16]};
       if(load_ctl[1])begin
         r_tran_nums = 1;
         _rdata_sram = {_rdata0[15:0], _rdata1[63:48]};
@@ -165,6 +174,7 @@ always@(*)begin
       end
     end
     3'b111:begin
+      _rdata_psram = {24'b0, _rdata0[31:24]};
       if(load_ctl[1] || load_ctl[0])begin
         r_tran_nums = 1;
         _rdata_sram = {_rdata0[23:0], _rdata1[63:56]};
@@ -292,7 +302,7 @@ always@(posedge clk)begin
                 || ren&&io_master_rvalid&&(read_state ==TRAN1));
 end
 
-assign _rdata = is_read_sram ? _rdata_sram : _rdata0[31:0];
+assign _rdata = is_read_sram ? _rdata_sram : (is_read_psram ? _rdata_psram : _rdata0[31:0]);
 
 always@(*)begin
   case(load_ctl)

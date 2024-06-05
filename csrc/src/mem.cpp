@@ -15,11 +15,14 @@ extern "C" void mrom_read(uint32_t addr, uint32_t *data) {
 }
 
 extern "C" int psram_read(uint32_t addr) { 
-  return *(uint32_t*)psram_addr(addr);
+  uint32_t a = *(uint32_t*)psram_addr(addr);
+  printf("psram_read, %x\n", a);
+  return a;
 }
 
 extern "C" void psram_write(uint32_t addr, uint32_t data) { 
   *(uint32_t*)psram_addr(addr) = data;
+  printf("psram_write, %x\n", data);
 }
 
  long flash_init(char* img_file){
