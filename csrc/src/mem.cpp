@@ -118,8 +118,8 @@ long mem_init(char* img_file) {
   }
   psram_init();
   long size = flash_init(img_file);
-  /* mem = malloc(CONFIG_MSIZE); */
-  /**/
+  mem = malloc(CONFIG_MSIZE);
+
   /* FILE *fp = fopen(img_file, "rb"); */
   /* // Assert(fp, "Can not open '%s'", img_file); */
   /**/

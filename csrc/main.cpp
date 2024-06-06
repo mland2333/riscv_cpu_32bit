@@ -171,6 +171,7 @@ int main(int argc, char* argv[])
   sim_init();
   args_init(argc, argv);
   long img_size = mem_init(img_file);
+  /* printf("img_size = %ld", img_size); */
   sdb_init();
   init_disasm("riscv32-linux-pc-gnu");
 #ifdef CONFIG_FTRACE

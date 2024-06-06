@@ -6,7 +6,7 @@ extern void* mem;
 #define v_to_p(addr) (((uint64_t)addr - (uint64_t)CONFIG_MBASE) + (uint64_t)mem)
 
 extern char* flash;
-#define FLASH_SIZE 0x1000000
+#define FLASH_SIZE 0x10000000
 #define FLASH_BASE 0x30000000
 #define flash_addr(addr) ((uint64_t)addr + (uint64_t)flash)
 

@@ -34,12 +34,12 @@ void cpu_update(){
 void sim_init()
 {
     top = new VysyxSoCFull;
-    Verilated::traceEverOn(true);
+    /*Verilated::traceEverOn(true);
     contextp = new VerilatedContext;
     tfp = new VerilatedVcdC;
     
     top->trace(tfp, 0);
-    tfp->open("dump.vcd");
+    tfp->open("dump.vcd");*/
 }
 
 void sim_close()
@@ -53,8 +53,8 @@ void sim_close()
 void step_and_dump_wave() {
   top->eval();
   
-  contextp->timeInc(1);
-  tfp->dump(contextp->time());
+  /*contextp->timeInc(1);
+  tfp->dump(contextp->time());*/
   
 }
 void single_cycle() {
@@ -99,7 +99,8 @@ int exec_once(){
 #endif
   //cpu_display();
 #ifdef CONFIG_FTRACE
-  ftrace(inst, pc, top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__pc);
+  if(top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__lsu_finish)
+    ftrace(inst, pc, top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__exu_upc);
 #endif
 #ifdef CONFIG_DIFFTEST
   //printf("result=0x%x\n", top->result);
