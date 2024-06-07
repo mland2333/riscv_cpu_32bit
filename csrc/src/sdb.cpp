@@ -23,6 +23,7 @@ extern "C" void disassemble(char *str, int size, uint64_t pc, uint8_t *code,
 #endif
 
 int inst_num = 0;
+int trace_enable = 0;
 
 void cpu_update(){
   for (int i = 0; i < 32; i++) {
@@ -34,12 +35,12 @@ void cpu_update(){
 void sim_init()
 {
     top = new VysyxSoCFull;
-    /*Verilated::traceEverOn(true);
+    Verilated::traceEverOn(true);
     contextp = new VerilatedContext;
     tfp = new VerilatedVcdC;
     
     top->trace(tfp, 0);
-    tfp->open("dump.vcd");*/
+    tfp->open("dump.vcd");
 }
 
 void sim_close()
@@ -52,10 +53,10 @@ void sim_close()
 
 void step_and_dump_wave() {
   top->eval();
-  
-  /*contextp->timeInc(1);
-  tfp->dump(contextp->time());*/
-  
+  if(trace_enable){
+    contextp->timeInc(1);
+    tfp->dump(contextp->time());
+  }
 }
 void single_cycle() {
   top->clock = 1; step_and_dump_wave();
@@ -75,6 +76,8 @@ uint32_t inst;
 int exec_once(){
   
   //top->inst = inst;
+  if(trace_enable != 1 && pc >= 0x80000000)
+    trace_enable = 1;
   inst_num++; 
   mem_en = true;
   mem_wen = true;
@@ -84,7 +87,7 @@ int exec_once(){
   pc = top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__pc;              
   inst = top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__inst;
   top->clock = 0; step_and_dump_wave();
- 
+   
   //mem_en = false;
   #ifdef CONFIG_DEVICE
   device_updata();

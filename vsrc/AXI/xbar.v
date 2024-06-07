@@ -38,15 +38,17 @@ module ysyx_20020207_XBAR(
 
   output diff_skip
 );
+localparam OTHER_ZONE = 3'b000;
+localparam PSRAM_ZONE = 3'b001;
+localparam SRAM_ZONE = 3'b010;
+localparam UART_ZONE = 3'b011;
+localparam RTC_ZONE = 3'b100;
+localparam FLASH_ZONE = 3'b101;
 
-localparam SRAM_ZONE = 2'b00;
-localparam UART_ZONE = 2'b01;
-localparam RTC_ZONE = 2'b10;
-localparam FLASH_ZONE = 2'b11;
-reg[1:0] read_zone;
-reg[1:0] write_zone;
+reg[2:0] read_zone;
+reg[2:0] write_zone;
 always@(*)begin
-  read_zone = SRAM_ZONE;
+  read_zone = OTHER_ZONE;
   high = 0;
   if(araddr >= `UART && araddr < `UART + 32'h1000)
     read_zone = UART_ZONE;
@@ -60,13 +62,15 @@ always@(*)begin
     read_zone = FLASH_ZONE;
   else if(araddr >= `SRAM_BASE && araddr < `SRAM_BASE + `SRAM_SIZE)
     read_zone = SRAM_ZONE;
+  else if(araddr >= `PSRAM_BASE && araddr < `PSRAM_BASE + `PSRAM_SIZE)
+    read_zone = PSRAM_ZONE;
   else 
-    read_zone = 2'b11;
+    read_zone = OTHER_ZONE;
 end
 
 
 always@(*)begin
-  write_zone = SRAM_ZONE;
+  write_zone = OTHER_ZONE;
   if(awaddr >= `UART && araddr < `UART + 32'h0fff)
     write_zone = UART_ZONE;
   else if(awaddr == `RTC_ADDR)
@@ -78,11 +82,14 @@ always@(*)begin
     write_zone = FLASH_ZONE;
   else if(awaddr >= `SRAM_BASE && awaddr < `SRAM_BASE + `SRAM_SIZE)
     write_zone = SRAM_ZONE;
+  else if(awaddr >= `PSRAM_BASE && awaddr < `PSRAM_BASE + `PSRAM_SIZE)
+    write_zone = PSRAM_ZONE;
   else 
-    write_zone = 2'b11;
+    write_zone = OTHER_ZONE;
 end
 
-assign diff_skip = read_zone != SRAM_ZONE || write_zone != SRAM_ZONE;
+assign diff_skip = read_zone == UART_ZONE || write_zone == UART_ZONE
+                || read_zone == RTC_ZONE || write_zone == RTC_ZONE;
 
 always@(*)begin
   arvalid1 = 0;

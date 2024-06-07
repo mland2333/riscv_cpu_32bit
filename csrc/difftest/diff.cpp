@@ -34,7 +34,7 @@ void init_difftest(char *ref_so_file, long img_size, int port)
   void (*difftest_init)(int) = reinterpret_cast<void (*)(int)>(dlsym(handle, "difftest_init"));
 
   difftest_init(port);
-  difftest_memcpy(CONFIG_MBASE, (void*)flash, img_size, DIFFTEST_TO_REF);
+  difftest_memcpy(0x30000000, (void*)flash, img_size, DIFFTEST_TO_REF);
   difftest_regcpy(&cpu, DIFFTEST_TO_REF);
 }
 
