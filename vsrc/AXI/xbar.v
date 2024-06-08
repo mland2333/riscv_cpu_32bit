@@ -71,7 +71,7 @@ end
 
 always@(*)begin
   write_zone = OTHER_ZONE;
-  if(awaddr >= `UART && araddr < `UART + 32'h0fff)
+  if(awaddr >= `UART && awaddr < `UART + 32'h0fff)
     write_zone = UART_ZONE;
   else if(awaddr == `RTC_ADDR)
     write_zone = RTC_ZONE;

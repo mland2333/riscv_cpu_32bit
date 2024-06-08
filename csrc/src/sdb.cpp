@@ -53,7 +53,7 @@ void sim_close()
 
 void step_and_dump_wave() {
   top->eval();
-  if(trace_enable){
+  if(!trace_enable){
     contextp->timeInc(1);
     tfp->dump(contextp->time());
   }
