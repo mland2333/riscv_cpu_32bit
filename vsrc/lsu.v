@@ -50,6 +50,7 @@ wire is_read_sram = raddr >= 32'h0f000000 && raddr < 32'h0f002000;
 wire is_write_sram = waddr >= 32'h0f000000 && waddr < 32'h0f002000;
 
 wire is_read_psram = raddr >= 32'h80000000 && raddr < 32'ha0000000;
+wire is_read_sdram = raddr >= 32'ha0000000 && raddr < 32'hc0000000;
 
 reg arvalid, rready, awvalid, wvalid, bready;
 reg[7:0] _wstrb;
@@ -302,7 +303,7 @@ always@(posedge clk)begin
                 || ren&&io_master_rvalid&&(read_state ==TRAN1));
 end
 
-assign _rdata = is_read_sram ? _rdata_sram : (is_read_psram ? _rdata_psram : _rdata0[31:0]);
+assign _rdata = is_read_sram ? _rdata_sram : (is_read_psram||is_read_sdram ? _rdata_psram : _rdata0[31:0]);
 
 always@(*)begin
   case(load_ctl)

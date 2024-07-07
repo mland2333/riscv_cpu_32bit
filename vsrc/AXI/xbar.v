@@ -44,6 +44,7 @@ localparam SRAM_ZONE = 3'b010;
 localparam UART_ZONE = 3'b011;
 localparam RTC_ZONE = 3'b100;
 localparam FLASH_ZONE = 3'b101;
+localparam SDRAM_ZONE = 3'b110;
 
 reg[2:0] read_zone;
 reg[2:0] write_zone;
@@ -64,6 +65,8 @@ always@(*)begin
     read_zone = SRAM_ZONE;
   else if(araddr >= `PSRAM_BASE && araddr < `PSRAM_BASE + `PSRAM_SIZE)
     read_zone = PSRAM_ZONE;
+  else if(araddr >= `SDRAM_BASE && araddr < `SDRAM_BASE + `SDRAM_SIZE)
+    read_zone = SDRAM_ZONE;
   else 
     read_zone = OTHER_ZONE;
 end
@@ -84,12 +87,15 @@ always@(*)begin
     write_zone = SRAM_ZONE;
   else if(awaddr >= `PSRAM_BASE && awaddr < `PSRAM_BASE + `PSRAM_SIZE)
     write_zone = PSRAM_ZONE;
+  else if(awaddr >= `SDRAM_BASE && awaddr < `SDRAM_BASE + `SDRAM_SIZE)
+    write_zone = SDRAM_ZONE;
   else 
     write_zone = OTHER_ZONE;
 end
 
 assign diff_skip = read_zone == UART_ZONE || write_zone == UART_ZONE
-                || read_zone == RTC_ZONE || write_zone == RTC_ZONE;
+                || read_zone == RTC_ZONE || write_zone == RTC_ZONE
+                || read_zone == SDRAM_ZONE || write_zone == SDRAM_ZONE;
 
 always@(*)begin
   arvalid1 = 0;
