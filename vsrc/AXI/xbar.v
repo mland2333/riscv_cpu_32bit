@@ -94,8 +94,7 @@ always@(*)begin
 end
 
 assign diff_skip = read_zone == UART_ZONE || write_zone == UART_ZONE
-                || read_zone == RTC_ZONE || write_zone == RTC_ZONE
-                || read_zone == SDRAM_ZONE || write_zone == SDRAM_ZONE;
+                || read_zone == RTC_ZONE || write_zone == RTC_ZONE;
 
 always@(*)begin
   arvalid1 = 0;
