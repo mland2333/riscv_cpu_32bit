@@ -45,6 +45,7 @@ localparam UART_ZONE = 3'b011;
 localparam RTC_ZONE = 3'b100;
 localparam FLASH_ZONE = 3'b101;
 localparam SDRAM_ZONE = 3'b110;
+localparam DEVICE_ZONE = 3'b111;
 
 reg[2:0] read_zone;
 reg[2:0] write_zone;
@@ -52,7 +53,7 @@ always@(*)begin
   read_zone = OTHER_ZONE;
   high = 0;
   if(araddr >= `UART && araddr < `UART + 32'h1000)
-    read_zone = UART_ZONE;
+    read_zone = DEVICE_ZONE;
   else if(araddr == `RTC_ADDR)
     read_zone = RTC_ZONE;
   else if(araddr == `RTC_ADDR_HIGH)begin
@@ -67,6 +68,8 @@ always@(*)begin
     read_zone = PSRAM_ZONE;
   else if(araddr >= `SDRAM_BASE && araddr < `SDRAM_BASE + `SDRAM_SIZE)
     read_zone = SDRAM_ZONE;
+  else if(araddr >= `GPIO_BASE && araddr < `GPIO_BASE + `GPIO_SIZE)
+    read_zone = DEVICE_ZONE;
   else 
     read_zone = OTHER_ZONE;
 end
@@ -75,7 +78,7 @@ end
 always@(*)begin
   write_zone = OTHER_ZONE;
   if(awaddr >= `UART && awaddr < `UART + 32'h0fff)
-    write_zone = UART_ZONE;
+    write_zone = DEVICE_ZONE;
   else if(awaddr == `RTC_ADDR)
     write_zone = RTC_ZONE;
   else if(awaddr == `RTC_ADDR_HIGH)begin
@@ -89,11 +92,13 @@ always@(*)begin
     write_zone = PSRAM_ZONE;
   else if(awaddr >= `SDRAM_BASE && awaddr < `SDRAM_BASE + `SDRAM_SIZE)
     write_zone = SDRAM_ZONE;
+  else if(awaddr >= `GPIO_BASE && awaddr < `GPIO_BASE + `GPIO_SIZE)
+    write_zone = DEVICE_ZONE;
   else 
     write_zone = OTHER_ZONE;
 end
 
-assign diff_skip = read_zone == UART_ZONE || write_zone == UART_ZONE
+assign diff_skip = read_zone == DEVICE_ZONE || write_zone == DEVICE_ZONE
                 || read_zone == RTC_ZONE || write_zone == RTC_ZONE;
 
 always@(*)begin

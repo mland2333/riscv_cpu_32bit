@@ -11,6 +11,10 @@
 #include "cpu.h"
 #include "device.h"
 #include "ftrace.h"
+#include <nvboard.h>
+
+void nvboard_bind_all_pins(TOP_NAME* top);
+
 VerilatedContext* contextp = NULL;
 VerilatedVcdC* tfp = NULL;
 VysyxSoCFull* top = NULL;
@@ -38,7 +42,8 @@ void sim_init()
     Verilated::traceEverOn(true);
     contextp = new VerilatedContext;
     tfp = new VerilatedVcdC;
-    
+    nvboard_bind_all_pins(top);
+    nvboard_init();
     top->trace(tfp, 0);
     tfp->open("dump.vcd");
 }
@@ -74,7 +79,8 @@ bool mem_wen = false;
 uint32_t pc;
 uint32_t inst;
 int exec_once(){
-  
+ 
+  nvboard_update();
   //top->inst = inst;
   if(trace_enable != 1 && pc >= 0x80000000)
     trace_enable = 1;
