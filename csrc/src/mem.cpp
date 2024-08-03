@@ -37,9 +37,6 @@ extern "C" void psram_write(uint32_t addr, uint32_t data) {
   int ret = fread((void*)flash, size, 1, fp);
   fclose(fp);
   return size;
-  /*uint32_t* flash32 = (uint32_t*)flash;
-  for(uint32_t i = 0; i < FLASH_SIZE / 4; i++)
-     flash32[i] = i;*/
 }
 
 void psram_init(){

@@ -7,12 +7,12 @@ module ysyx_20020207_ARBITER(
   output reg[1:0] rresp1,
   output reg[63:0] rdata1,
   //写通道1
-  input awvalid1, wvalid1, bready1,
-  input [7:0] wstrb1,
-  input [31:0] awaddr1, 
-  input [63:0] wdata1,
-  output reg awready1, wready1, bvalid1,
-  output reg[1:0] bresp1,
+  //input awvalid1, wvalid1, bready1,
+  //input [7:0] wstrb1,
+  //input [31:0] awaddr1, 
+  //input [63:0] wdata1,
+  //output reg awready1, wready1, bvalid1,
+  //output reg[1:0] bresp1,
   //读通道2
   input arvalid2, rready2,
   input [31:0] araddr2,
@@ -117,16 +117,8 @@ always@(posedge clk)begin
   else begin
     case(write_state)
       IDLE_WRITE:begin
-        if(awvalid1 && wvalid1)begin
-          write_state <= MEM1_WRITE;
-        end
-        else if(awvalid2 && wvalid2)begin
+        if(awvalid2 && wvalid2)begin
           write_state <= MEM2_WRITE;
-        end
-      end
-      MEM1_WRITE:begin
-        if(bvalid && bready)begin
-          write_state <= IDLE_WRITE;
         end
       end
       MEM2_WRITE:begin
@@ -143,14 +135,6 @@ end
 
 always@(*)begin
   case(write_state)
-    MEM1_WRITE:begin
-      awvalid = awvalid1;
-      wvalid = wvalid1;
-      bready = bready1;
-      awaddr = awaddr1;
-      wdata = wdata1;
-      wstrb = wstrb1;
-    end
     MEM2_WRITE:begin
       awvalid = awvalid2;
       wvalid = wvalid2;
@@ -169,11 +153,6 @@ always@(*)begin
     end
   endcase
 end
-
-assign awready1 = write_state == MEM1_WRITE ? awready : 0;
-assign wready1 = write_state == MEM1_WRITE ? wready : 0;
-assign bvalid1 = write_state == MEM1_WRITE ? bvalid : 0;
-assign bresp1 = write_state == MEM1_WRITE ? bresp : 0;
 
 assign awready2 = write_state == MEM2_WRITE ? awready : 0;
 assign wready2 = write_state == MEM2_WRITE ? wready : 0;

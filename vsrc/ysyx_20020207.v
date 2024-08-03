@@ -102,7 +102,7 @@ assign  io_master_awid      =   'b0       ,
       .pc(pc)
     );
     
-    wire ifu_arready, ifu_ok, ifu_request, ifu_arvalid, ifu_rready;
+    wire ifu_arready, ifu_arvalid, ifu_rready;
     wire ifu_rvalid;
     wire[1:0] ifu_rresp;
     wire[63:0] ifu_rdata; 
@@ -256,8 +256,6 @@ assign  io_master_awid      =   'b0       ,
     wire rvalid, arready, arvalid, rready, awvalid, wvalid, bready, awready, bvalid, wready;
     wire[31:0] araddr, awaddr;
     wire[63:0] wdata, rdata;
-    wire ifu_awready, ifu_wready, ifu_bvalid;
-    wire [1:0] ifu_bresp;
     ysyx_20020207_ARBITER marbiter(
       .clk(clock),
       .rst(reset),
@@ -269,16 +267,6 @@ assign  io_master_awid      =   'b0       ,
       .rvalid1(ifu_rvalid),
       .rresp1(ifu_rresp),
       .rdata1(ifu_rdata),
-      .awvalid1(0),
-      .wvalid1(0),
-      .bready1(0),
-      .wstrb1(0),
-      .awaddr1(0),
-      .wdata1(0),
-      .awready1(ifu_awready),
-      .wready1(ifu_wready),
-      .bvalid1(ifu_bvalid),
-      .bresp1(ifu_bresp),
 
       .arvalid2(lsu_arvalid),
       .rready2(lsu_rready),
