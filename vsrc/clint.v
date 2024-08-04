@@ -2,11 +2,11 @@ module ysyx_20020207_CLINT(
   input clk, rst, high,
   input reg arvalid, rready, awvalid, wvalid, bready,
   input[31:0] araddr, awaddr,
-  input [63:0] wdata,
-  input[7:0] wstrb,
+  input [31:0] wdata,
+  input[3:0] wstrb,
   output reg arready, rvalid, awready, wready, bvalid,
   output reg[1:0] rresp, bresp,
-  output[63:0] rdata
+  output[31:0] rdata
 );
 
 reg [63:0] mtime;
@@ -54,9 +54,9 @@ always@(posedge clk)begin
         rvalid <= 1;
         rresp <= 0;
         if(high)
-          rdata <= {32'b0, mtime[63:32]};
+          rdata <= mtime[63:32];
         else
-          rdata <= {32'b0, mtime[31:0]};
+          rdata <= mtime[31:0];
         need_read <= 0;
         //read_delay_start <= 0;
       //end

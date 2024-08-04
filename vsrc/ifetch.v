@@ -9,7 +9,7 @@ module ysyx_20020207_IFU(
   output reg io_master_rready,
   input  io_master_rvalid,
   input  [1:0] io_master_rresp,
-  input  [63:0] io_master_rdata,
+  input  [31:0] io_master_rdata,
 
   output reg[31:0] inst,
   output reg pc_wen, inst_valid
@@ -18,15 +18,6 @@ reg wait_ready;
 
 assign io_master_araddr = pc;
 
-reg [31:0] _rdata;
-always@(*)begin
-  if(pc >= 32'h0f000000 && pc < 32'h0f002000 && pc[2] == 1)
-    _rdata = io_master_rdata[63:32];
-  else 
-    _rdata = io_master_rdata[31:0];
-end
-
-
 always@(posedge clk)begin
   if(rst)begin
     inst <= 0;
@@ -34,7 +25,7 @@ always@(posedge clk)begin
     io_master_rready <= 1;
   end
   else if(io_master_rvalid)begin
-    inst <= _rdata;
+    inst <= io_master_rdata;
     inst_valid <= 1;
   end
   else begin

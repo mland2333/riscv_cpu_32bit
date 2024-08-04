@@ -16,8 +16,8 @@ module ysyx_20020207 #(DATA_WIDTH = 32)(
 
   input  io_master_wready,
   output io_master_wvalid,
-  output [63:0] io_master_wdata,
-  output [7:0] io_master_wstrb,
+  output [31:0] io_master_wdata,
+  output [3:0] io_master_wstrb,
   output io_master_wlast,
 
   output io_master_bready,
@@ -36,7 +36,7 @@ module ysyx_20020207 #(DATA_WIDTH = 32)(
   output io_master_rready,
   input  io_master_rvalid,
   input  [1:0] io_master_rresp,
-  input  [63:0] io_master_rdata,
+  input  [31:0] io_master_rdata,
   input  io_master_rlast,
   input  [3:0] io_master_rid,
 
@@ -49,8 +49,8 @@ module ysyx_20020207 #(DATA_WIDTH = 32)(
   input [1:0] io_slave_awburst,
   output io_slave_wready,
   input io_slave_wvalid,
-  input [63:0] io_slave_wdata,
-  input [7:0] io_slave_wstrb,
+  input [31:0] io_slave_wdata,
+  input [3:0] io_slave_wstrb,
   input io_slave_wlast,
   input io_slave_bready,
   output io_slave_bvalid,
@@ -66,7 +66,7 @@ module ysyx_20020207 #(DATA_WIDTH = 32)(
   input io_slave_rready,
   output io_slave_rvalid,
   output [1:0] io_slave_rresp,
-  output [63:0] io_slave_rdata,
+  output [31:0] io_slave_rdata,
   output io_slave_rlast,
   output [3:0] io_slave_rid
 );
@@ -105,7 +105,7 @@ assign  io_master_awid      =   'b0       ,
     wire ifu_arready, ifu_arvalid, ifu_rready;
     wire ifu_rvalid;
     wire[1:0] ifu_rresp;
-    wire[63:0] ifu_rdata; 
+    wire[31:0] ifu_rdata; 
     wire[31:0] ifu_araddr;
     wire inst_valid;
     ysyx_20020207_IFU mifu(
@@ -165,7 +165,7 @@ assign  io_master_awid      =   'b0       ,
     wire [2:0] csr_ctl;
     reg[31:0] exu_upc, csr_upc;
     wire[31:0] alu_a, alu_b;
-    wire[7:0] wmask;
+    wire[3:0] wmask;
     wire[3:0] alu_ctl;
     wire[1:0] result_ctl;
     wire mem_ren, alu_sub, alu_sign, exu_jump;
@@ -215,8 +215,8 @@ assign  io_master_awid      =   'b0       ,
     wire lsu_arvalid, lsu_rready, lsu_awvalid, lsu_wvalid, lsu_bready, lsu_wready;
     wire lsu_rvalid, lsu_bvalid, lsu_awready, lsu_arready; 
     wire [31:0] lsu_araddr, lsu_awaddr;
-    wire [63:0] lsu_wdata, lsu_rdata;
-    wire[7:0] lsu_wstrb;
+    wire [31:0] lsu_wdata, lsu_rdata;
+    wire[3:0] lsu_wstrb;
     wire[1:0] lsu_rresp, lsu_bresp, rresp, bresp;
     assign mem_raddr = alu_result;
     assign mem_waddr = alu_result;
@@ -252,10 +252,10 @@ assign  io_master_awid      =   'b0       ,
       .io_master_wdata(lsu_wdata),
       .io_master_wstrb(lsu_wstrb)
     );
-    wire[7:0] wstrb;
+    wire[3:0] wstrb;
     wire rvalid, arready, arvalid, rready, awvalid, wvalid, bready, awready, bvalid, wready;
     wire[31:0] araddr, awaddr;
-    wire[63:0] wdata, rdata;
+    wire[31:0] wdata, rdata;
     ysyx_20020207_ARBITER marbiter(
       .clk(clock),
       .rst(reset),
@@ -307,22 +307,22 @@ assign  io_master_awid      =   'b0       ,
     wire sram_arvalid, sram_rready, sram_awvalid, sram_wvalid, sram_bready, sram_wready;
     wire sram_rvalid, sram_bvalid, sram_awready, sram_arready; 
     wire[31:0] sram_araddr, sram_awaddr;
-    wire[63:0] sram_wdata, sram_rdata;
-    wire[7:0] sram_wstrb;
+    wire[31:0] sram_wdata, sram_rdata;
+    wire[3:0] sram_wstrb;
     wire[1:0] sram_rresp, sram_bresp;
 
     wire uart_arvalid, uart_rready, uart_awvalid, uart_wvalid, uart_bready, uart_wready;
     wire uart_rvalid, uart_bvalid, uart_awready, uart_arready; 
     wire [31:0] uart_araddr, uart_awaddr;
-    wire [63:0] uart_wdata, uart_rdata;
-    wire[7:0] uart_wstrb;
+    wire [31:0] uart_wdata, uart_rdata;
+    wire[3:0] uart_wstrb;
     wire[1:0] uart_rresp, uart_bresp;
 
     wire clint_arvalid, clint_rready, clint_awvalid, clint_wvalid, clint_bready, clint_wready;
     wire clint_rvalid, clint_bvalid, clint_awready, clint_arready; 
     wire [31:0] clint_araddr, clint_awaddr;
-    wire [63:0] clint_wdata, clint_rdata;
-    wire[7:0] clint_wstrb;
+    wire [31:0] clint_wdata, clint_rdata;
+    wire[3:0] clint_wstrb;
     wire[1:0] clint_rresp, clint_bresp;
     wire clint_high;
 

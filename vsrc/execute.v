@@ -11,7 +11,7 @@ module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     output reg[3:0] alu_ctl,
     output reg[1:0] result_ctl,
     output reg upc_ctl, sub, sign,
-    output reg[7:0] wmask,
+    output reg[3:0] wmask,
     output reg[2:0] load_ctl
 );
     localparam ADD = 4'b0000;
@@ -155,9 +155,9 @@ module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
                 alu_ctl = ADD;
                 mem_wen = 1;
                 case(func)
-                  3'b000: wmask = 8'b00000001;
-                  3'b001: wmask = 8'b00000011;
-                  default: wmask = 8'b00001111;
+                  3'b000: wmask = 4'b0001;
+                  3'b001: wmask = 4'b0011;
+                  default: wmask = 4'b1111;
                 endcase
             end
             7'b1100011:begin  //B
