@@ -5,11 +5,11 @@
 #include "device.h"
 #include "mem.h"
 #include <cstdint>
+#include <format>
 #include <functional>
 #include <getopt.h>
 #include <iostream>
 #include <unordered_map>
-
 #ifdef CONFIG_FTRACE
 #include "ftrace.h"
 #endif
@@ -35,7 +35,98 @@ extern "C" void disassemble(char *str, int size, uint64_t pc, uint8_t *code,
 VysyxSoCFull *top = NULL;
 std::unordered_map<std::string, std::function<int(char *)>> sdb_map;
 CPU_status cpu;
-int inst_num = 0;
+uint32_t pc;
+
+class Performance {
+public:
+  int inst_nums = 0;
+  int clk_nums = 0;
+  int ifu_nums = 0;
+  int load_nums = 0;
+  int exu_nums = 0;
+  int idu_exu_nums = 0, idu_store_nums = 0, idu_load_nums = 0, idu_csr_nums = 0;
+  int inst_type = 0;
+  int clk_rev = 0;
+  int inst_clk[6];
+  void ifu_get_inst() {
+    if (pc >= 0xa0000000)
+      ifu_nums++;
+  }
+  void lsu_get_data() {
+    if (pc >= 0xa0000000)
+      load_nums++;
+  }
+  void exu_finish_cal() {
+    if (pc >= 0xa0000000)
+      exu_nums++;
+  }
+  void idu_decode_inst(int inst) {
+    if (pc >= 0xa0000000) {
+      int a = inst & 0x7f;
+      switch (a) {
+      case 0x03:
+        idu_load_nums++;
+        inst_type = 1;
+        break;
+      case 0x23:
+        idu_store_nums++;
+        inst_type = 2;
+        break;
+      case 0x73:
+        idu_csr_nums++;
+        inst_type = 3;
+        break;
+      default:
+        idu_exu_nums++;
+        inst_type = 4;
+      }
+    }
+  }
+
+  float get_ipc() {
+    if (clk_nums != 0)
+      return float(inst_nums) / float(clk_nums);
+    else
+      return 0;
+  }
+
+  ~Performance() {
+    clk_nums -= 10;
+    std::cout << std::format(
+        "inst_nums = {}\nclk_nums = {}\nipc = {}\nifu_nums = {}\nload_nums = "
+        "{}\nexu_nums = {}\ninst_exu_nums = "
+        "{},占比{}%,平均需要{}个周期\ninst_csr_nums = "
+        "{},占比{}%,平均需要{}个周期\ninst_store_nums = "
+        "{},占比{}%,平均需要{}个周期\ninst_load_nums = "
+        "{},占比{}%,平均需要{}个周期\n平均访存延迟为{}个周期\n平均取指延迟为{}"
+        "个周期\n平均每条指令为{}个周期\n",
+        inst_nums, clk_nums, get_ipc(), ifu_nums, load_nums, exu_nums,
+        idu_exu_nums, (float)idu_exu_nums / (float)inst_nums * 100,
+        (float)inst_clk[3] / (float)idu_exu_nums, (float)idu_csr_nums,
+        (float)idu_csr_nums / (float)inst_nums * 100,
+        (float)inst_clk[2] / (float)idu_csr_nums, idu_store_nums,
+        (float)idu_store_nums / (float)inst_nums * 100,
+        (float)inst_clk[1] / (float)idu_store_nums, idu_load_nums,
+        (float)idu_load_nums / (float)inst_nums * 100,
+        (float)inst_clk[0] / (float)idu_load_nums,
+        (float)inst_clk[4] / (float)(idu_load_nums + idu_store_nums),
+        (float)inst_clk[5] / (float)inst_nums,
+        (float)clk_nums / (float)(inst_nums - 1));
+  }
+};
+
+Performance perf;
+
+extern "C" {
+
+void ifu_get_inst() { perf.ifu_get_inst(); }
+
+void lsu_get_data() { perf.lsu_get_data(); }
+
+void exu_finish_cal() { perf.exu_finish_cal(); }
+
+void idu_decode_inst(int inst) { perf.idu_decode_inst(inst); }
+}
 
 void cpu_update() {
   for (int i = 0; i < 32; i++) {
@@ -97,7 +188,8 @@ void reset(int n) {
 
 bool mem_en = false;
 bool mem_wen = false;
-uint32_t pc;
+bool perf_begin = false;
+int lsu_begin = 0;
 uint32_t inst;
 int exec_once() {
 
@@ -109,7 +201,29 @@ int exec_once() {
   if (trace_enable != 1 && pc >= 0xa0000000)
     trace_enable = 1;
 #endif
-  inst_num++;
+  if (pc >= 0xa0000000 &&
+      top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__pc_wen)
+    perf_begin = true;
+  if (perf_begin) {
+    perf.clk_nums++;
+    if (top->rootp
+            ->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__inst_valid) {
+      perf.inst_nums++;
+      int fetch_clk = perf.clk_nums - perf.clk_rev;
+      if (fetch_clk != 9)
+        std::cout << std::format("取指周期{},pc=0x{:x}\n", fetch_clk, pc);
+      perf.inst_clk[5] += fetch_clk;
+      lsu_begin = perf.clk_nums;
+    }
+    if ((perf.inst_type == 1 || perf.inst_type == 2) &&
+        top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__lsu_finish)
+      perf.inst_clk[4] += perf.clk_nums - lsu_begin;
+
+    if (top->rootp->ysyxSoCFull__DOT__asic__DOT__cpu__DOT__cpu__DOT__pc_wen) {
+      perf.inst_clk[perf.inst_type - 1] += perf.clk_nums - perf.clk_rev;
+      perf.clk_rev = perf.clk_nums;
+    }
+  }
   mem_en = true;
   mem_wen = true;
   top->clock = 1;

@@ -1,3 +1,5 @@
+import "DPI-C" function void ifu_get_inst();
+import "DPI-C" function void idu_decode_inst(input int inst);
 module ysyx_20020207_IFU(
   input clk, rst, lsu_finish,
   input [31:0] pc,
@@ -27,6 +29,8 @@ always@(posedge clk)begin
   else if(io_master_rvalid)begin
     inst <= io_master_rdata;
     inst_valid <= 1;
+    ifu_get_inst();
+    idu_decode_inst(io_master_rdata);
   end
   else begin
     inst_valid <= 0;

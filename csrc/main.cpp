@@ -201,8 +201,6 @@ int main(int argc, char* argv[])
     printf("difftest success\n");
   #endif*/
   sim_close();
-  extern int inst_num;
-  printf("inst nums: %d\n", inst_num);
   assert(result != -1);
   return 0;
 }
