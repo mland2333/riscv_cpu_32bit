@@ -1,5 +1,3 @@
-`include "include.v"
-
 module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     input [6:0] op,
     input [2:0] func,
@@ -14,6 +12,10 @@ module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     output reg[3:0] wmask,
     output reg[2:0] load_ctl
 );
+`define MRET 3'b001
+`define ECALL 3'b010
+`define EBREAK 3'b011
+`define CSRW 3'b100
     localparam ADD = 4'b0000;
     localparam XOR = 4'b0001;
     localparam OR  = 4'b0010;

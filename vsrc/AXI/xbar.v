@@ -1,5 +1,3 @@
-`include "include.v"
-
 module ysyx_20020207_XBAR(
   //与axi-arbiter连接接口
   input  arvalid, rready, awvalid, wvalid, bready, 
@@ -38,6 +36,26 @@ module ysyx_20020207_XBAR(
 
   output diff_skip
 );
+
+`define DEVICE_BASE 32'ha0000000
+`define UART 32'h10000000
+`define RTC_ADDR 32'h2000bff8
+`define RTC_ADDR_HIGH 32'h2000bffc
+`define FLASH_BASE 32'h30000000
+`define FLASH_SIZE 32'h10000000
+
+`define SRAM_BASE 32'h0f000000
+`define SRAM_SIZE 32'h00002000
+
+`define PSRAM_BASE 32'h80000000
+`define PSRAM_SIZE 32'h20000000
+
+`define SDRAM_BASE 32'ha0000000
+`define SDRAM_SIZE 32'h20000000
+
+`define GPIO_BASE 32'h10002000
+`define GPIO_SIZE 32'h00000010
+
 localparam OTHER_ZONE = 3'b000;
 localparam PSRAM_ZONE = 3'b001;
 localparam SRAM_ZONE = 3'b010;

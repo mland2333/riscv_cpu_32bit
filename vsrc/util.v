@@ -1,4 +1,4 @@
-module COUNT(
+/*module COUNT(
   input clk, rst, start,
   input[7:0] count,
   output reg zero
@@ -36,4 +36,4 @@ always@(posedge clk)begin
 end
 
 
-endmodule
+endmodule*/

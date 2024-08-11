@@ -1,4 +1,3 @@
-`include "include.v"
 module ysyx_20020207_CSRU(
   input clk, wen,
   input[2:0] csr_ctl,
@@ -7,6 +6,10 @@ module ysyx_20020207_CSRU(
   input lsu_ready,
   output reg[31:0] rdata, upc
 );
+`define MRET 3'b001
+`define ECALL 3'b010
+`define EBREAK 3'b011
+`define CSRW 3'b100
   localparam MSTATUS = 2'b00;
   localparam MTVEC = 2'b01;
   localparam MEPC = 2'b10;

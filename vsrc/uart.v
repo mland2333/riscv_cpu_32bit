@@ -1,4 +1,4 @@
-module UART(
+/*module UART(
   input clk, rst,
   input reg arvalid, rready, awvalid, wvalid, bready,
   input[31:0] araddr, awaddr, wdata,
@@ -67,4 +67,4 @@ end
 
 
 
-endmodule
+endmodule*/
