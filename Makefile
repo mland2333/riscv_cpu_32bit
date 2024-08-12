@@ -1,90 +1,44 @@
-TOPNAME = top
-NXDC_FILES = constr/top.nxdc
-INC_PATH += $(NPC_HOME)/csrc/include
-INC_PATH += $(NPC_HOME)/vsrc
-INC_PATH += $(YSYX_HOME)/ysyxSoC/perip/uart16550/rtl
-INC_PATH += $(YSYX_HOME)/ysyxSoC/perip/spi/rtl
+STUID = ysyx_22040000
+STUNAME = 毛乐
 
-VERILATOR = verilator
-VERILATOR_CFLAGS += -MMD --build -cc  \
-				-O3 --x-assign fast --x-initial fast --noassert --trace --timescale "1ns/1ns" --notiming --autoflush
+# DO NOT modify the following code!!!
 
-BUILD_DIR = ./build
-OBJ_DIR = $(BUILD_DIR)/obj_dir
-BIN = $(BUILD_DIR)/$(TOPNAME)
+TRACER = tracer-ysyx
+GITFLAGS = -q --author='$(TRACER) <tracer@ysyx.org>' --no-verify --allow-empty
 
-default: $(BIN)
+YSYX_HOME = $(NEMU_HOME)/..
+WORK_BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
+WORK_INDEX = $(YSYX_HOME)/.git/index.$(WORK_BRANCH)
+TRACER_BRANCH = $(TRACER)
 
-$(shell mkdir -p $(BUILD_DIR))
+LOCK_DIR = $(YSYX_HOME)/.git/
 
-# constraint file
-#SRC_AUTO_BIND = $(abspath $(BUILD_DIR)/auto_bind.cpp)
-#$(SRC_AUTO_BIND): $(NXDC_FILES)
-#	python3 $(NVBOARD_HOME)/scripts/auto_pin_bind.py $^ $@
+# prototype: git_soft_checkout(branch)
+define git_soft_checkout
+	git checkout --detach -q && git reset --soft $(1) -q -- && git checkout $(1) -q --
+endef
 
-# project source
-CDIRS := $(shell find $(abspath ./csrc) -mindepth 1 -type d)
+# prototype: git_commit(msg)
+define git_commit
+	-@flock $(LOCK_DIR) $(MAKE) -C $(YSYX_HOME) .git_commit MSG='$(1)'
+	-@sync $(LOCK_DIR)
+endef
 
-# project source
-VSRCS += $(YSYX_HOME)/ysyxSoC/build/ysyxSoCFull.v
-VSRCS = $(shell find $(abspath ./vsrc) -name "*.v")
-CSRCS = $(shell find $(abspath $(CDIRS)) -name "*.c" -or -name "*.cc" -or -name "*.cpp")
+.git_commit:
+	-@while (test -e .git/index.lock); do sleep 0.1; done;               `# wait for other git instances`
+	-@git branch $(TRACER_BRANCH) -q 2>/dev/null || true                 `# create tracer branch if not existent`
+	-@cp -a .git/index $(WORK_INDEX)                                     `# backup git index`
+	-@$(call git_soft_checkout, $(TRACER_BRANCH))                        `# switch to tracer branch`
+	-@git add . -A --ignore-errors                                       `# add files to commit`
+	-@(echo "> $(MSG)" && echo $(STUID) $(STUNAME) && uname -a && uptime `# generate commit msg`) \
+	                | git commit -F - $(GITFLAGS)                        `# commit changes in tracer branch`
+	-@$(call git_soft_checkout, $(WORK_BRANCH))                          `# switch to work branch`
+	-@mv $(WORK_INDEX) .git/index                                        `# restore git index`
 
-CSRCS += $(shell find $(abspath ./csrc) -maxdepth 1 -name "*.c" -or -name "*.cc" -or -name "*.cpp")
-#CSRCS += ./csrc/main.cpp
-CSRCS += $(SRC_AUTO_BIND)
+.clean_index:
+	rm -f $(WORK_INDEX)
 
-FILELIST_MK = $(shell find -L ./csrc -name "filelist.mk")
-include $(FILELIST_MK)
+_default:
+	@echo "Please run 'make' under subprojects."
 
-ELF ?=
-RUNFLAGS ?=
-# rules for NVBoard
-#include $(NVBOARD_HOME)/scripts/nvboard.mk
-
-# rules for verilator
-INCFLAGS = $(addprefix -I, $(INC_PATH))
-CFLAGS += $(INCFLAGS) -DTOP_NAME="\"V$(TOPNAME)\""# -g
-#CFLAGS += -DCONFIG_ITRACE
-
-RUNFLAGS ?=
-ifneq ($(strip $(ELF)),)
-	#CFLAGS += -DCONFIG_FTRACE
-	RUNFLAGS += -f $(ELF)
-endif
-
-DIFF_NUME_SO = $(NEMU_HOME)/build/riscv32-nemu-interpreter-so
-
-ifneq ($(strip $(DIFF_NUME_SO)),)
-	#CFLAGS += -DCONFIG_DIFFTEST
-	CFLAGS += -l$(DIFF_NUME_SO)
-	RUNFLAGS += -d $(DIFF_NUME_SO)
-
-endif
-
-#CFLAGS += -DCONFIG_MTRACE
-#CFLAGS += -DCONFIG_KEYBOARD
-LDFLAGS += $(LIBS)
-LDFLAGS += -lSDL2
-$(BIN): $(VSRCS) $(CSRCS) #$(NVBOARD_ARCHIVE)
-	@rm -rf $(OBJ_DIR)
-	$(VERILATOR) $(VERILATOR_CFLAGS) \
-		--top-module ysyxSoCFull $^ \
-		$(addprefix -CFLAGS , $(CFLAGS)) $(addprefix -LDFLAGS , $(LDFLAGS)) \
-		$(INCFLAGS) --Mdir $(OBJ_DIR) --exe -o $(abspath $(BIN))
-
-all: default
-
-run: $(BIN)
-	@$^ $(IMG) $(RUNFLAGS)
-gdb: $(BIN)
-	gdb --args $(BIN) $(IMG) $(RUNFLAGS)
-
-clean:
-	rm -rf $(BUILD_DIR)
-sim: $(BIN)
-	$(call git_commit, "sim RTL") # DO NOT REMOVE THIS LINE!!!
-	@$^
-	
-
-include ../Makefile
+.PHONY: .git_commit .clean_index _default
