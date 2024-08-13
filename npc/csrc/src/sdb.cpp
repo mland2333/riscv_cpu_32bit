@@ -279,14 +279,9 @@ int exec_once() {
   // printf("result=0x%x\n", top->result);
   cpu_update();
   extern int difftest_step();
-  extern bool npc_is_ref_skip_next;
   extern bool npc_is_ref_skip;
-  npc_is_ref_skip_next = TOP_MEMBER(is_diff_skip);
-  if (top->reset) {
-    npc_is_ref_skip_next = 1;
-    npc_is_ref_skip = 1;
-  }
-  if (TOP_MEMBER(lsu_finish) && (difftest_step() == -1))
+  npc_is_ref_skip = npc_is_ref_skip ? 1 : TOP_MEMBER(is_diff_skip);
+  if (TOP_MEMBER(diff) && (difftest_step() == -1))
     return -1;
 #endif
 

@@ -55,7 +55,7 @@ extern "C" int pmem_read(int addr) {
 
 
 extern "C" void pmem_write(int addr, int wdata, char wmask) {
-    uint32_t waddr = (uint32_t) addr;
+    uint32_t waddr = (uint32_t) addr & ~0x3u;
 #ifdef CONFIG_DEVICE 
   if(waddr == VGACTL_ADDR + 4){
     write_sync = wdata;

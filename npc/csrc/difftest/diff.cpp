@@ -12,7 +12,7 @@ void (*difftest_memcpy)(uint64_t addr, void *buf, size_t n, bool direction) = NU
 void (*difftest_regcpy)(void *dut, bool direction) = NULL;
 void (*difftest_exec)(uint64_t n) = NULL;
 void (*difftest_raise_intr)(uint64_t NO) = NULL;
-extern char* flash;
+
 int icount = 0;
 bool npc_is_ref_skip = false;
 bool npc_is_ref_skip_next = false;
@@ -34,7 +34,13 @@ void init_difftest(char *ref_so_file, long img_size, int port)
   void (*difftest_init)(int) = reinterpret_cast<void (*)(int)>(dlsym(handle, "difftest_init"));
 
   difftest_init(port);
+#ifdef CONFIG_YSYXSOC
+  extern char* flash;
   difftest_memcpy(0x30000000, (void*)flash, img_size, DIFFTEST_TO_REF);
+#else
+  extern void* mem;
+  difftest_memcpy(0x80000000, mem, img_size, DIFFTEST_TO_REF);
+#endif
   difftest_regcpy(&cpu, DIFFTEST_TO_REF);
 }
 
@@ -57,18 +63,7 @@ int difftest_step(){
     difftest_regcpy(&cpu, DIFFTEST_TO_REF);
     //cpu.pc -= 4;
     npc_is_ref_skip = false;
-    if(npc_is_ref_skip_next)
-    {
-      npc_is_ref_skip_next = false;
-      npc_is_ref_skip = true;
-    }
-    //printf("cpu.pc = 0x%x\n", cpu.pc);
     return 0;
-  }
-  if(npc_is_ref_skip_next)
-  {
-    npc_is_ref_skip_next = false;
-    npc_is_ref_skip = true;
   }
   difftest_exec(1);
   icount ++;

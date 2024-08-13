@@ -70,7 +70,7 @@ module ysyx_20020207 #(
 `endif
     input reset
 );
-import "DPI-C" function void exu_finish_cal();
+  import "DPI-C" function void exu_finish_cal();
   wire [DATA_WIDTH-1 : 0] inst;
   reg [DATA_WIDTH-1 : 0] pc, upc;
   wire [31:0] result;
@@ -104,6 +104,16 @@ import "DPI-C" function void exu_finish_cal();
       .pc  (pc)
   );
 
+  reg diff;
+  always @(posedge clock) begin
+    if (reset) diff <= 0;
+    else begin
+      if (pc_wen && ~diff) diff <= 1;
+      else diff <= 0;
+    end
+  end
+
+
   wire ifu_arready, ifu_arvalid, ifu_rready;
   wire ifu_rvalid;
   wire [1:0] ifu_rresp;
@@ -127,8 +137,7 @@ import "DPI-C" function void exu_finish_cal();
       .inst_valid(inst_valid)
   );
   always @(posedge clock) begin
-    if (inst_valid)
-      exu_finish_cal();
+    if (inst_valid) exu_finish_cal();
   end
   wire [6:0] op;
   wire [2:0] func;
@@ -333,92 +342,92 @@ import "DPI-C" function void exu_finish_cal();
   wire clint_high;
 
   ysyx_20020207_XBAR mxbar (
-      .arvalid(arvalid),
-      .rready (rready),
-      .araddr (araddr),
-      .arready(arready),
-      .rvalid (rvalid),
-      .rresp  (rresp),
-      .rdata  (rdata),
-      .awvalid(awvalid),
-      .wvalid (wvalid),
-      .bready (bready),
-      .wstrb  (wstrb),
-      .awaddr (awaddr),
-      .wdata  (wdata),
-      .awready(awready),
-      .wready (wready),
-      .bvalid (bvalid),
-      .bresp  (bresp),
-    `ifndef CONFIG_YSYXSOC
-      .arvalid1(sram_arvalid),
-      .rready1 (sram_rready),
-      .araddr1 (sram_araddr),
-      .arready1(sram_arready),
-      .rvalid1 (sram_rvalid),
-      .rresp1  (sram_rresp),
-      .rdata1  (sram_rdata),
-      .awvalid1(sram_awvalid),
-      .wvalid1 (sram_wvalid),
-      .bready1 (sram_bready),
-      .wstrb1  (sram_wstrb),
-      .awaddr1 (sram_awaddr),
-      .wdata1  (sram_wdata),
-      .awready1(sram_awready),
-      .wready1 (sram_wready),
-      .bvalid1 (sram_bvalid),
-      .bresp1  (sram_bresp),
-    `else
-      .arvalid1(io_master_arvalid),
-      .rready1 (io_master_rready),
-      .araddr1 (io_master_araddr),
-      .arready1(io_master_arready),
-      .rvalid1 (io_master_rvalid),
-      .rresp1  (io_master_rresp),
-      .rdata1  (io_master_rdata),
-      .awvalid1(io_master_awvalid),
-      .wvalid1 (io_master_wvalid),
-      .bready1 (io_master_bready),
-      .wstrb1  (io_master_wstrb),
-      .awaddr1 (io_master_awaddr),
-      .wdata1  (io_master_wdata),
-      .awready1(io_master_awready),
-      .wready1 (io_master_wready),
-      .bvalid1 (io_master_bvalid),
-      .bresp1  (io_master_bresp),
-    `endif
-      .arvalid2(clint_arvalid),
-      .rready2 (clint_rready),
-      .araddr2 (clint_araddr),
-      .arready2(clint_arready),
-      .rvalid2 (clint_rvalid),
-      .rresp2  (clint_rresp),
-      .rdata2  (clint_rdata), 
-      .high    (clint_high),
-    `ifndef CONFIG_YSYXSOC
-      .arvalid3(uart_arvalid),
-      .rready3 (uart_rready),
-      .araddr3 (uart_araddr),
-      .arready3(uart_arready),
-      .rvalid3 (uart_rvalid),
-      .rresp3  (uart_rresp),
-      .rdata3  (uart_rdata),
-      .awvalid3(uart_awvalid),
-      .wvalid3 (uart_wvalid),
-      .bready3 (uart_bready),
-      .wstrb3  (uart_wstrb),
-      .awaddr3 (uart_awaddr),
-      .wdata3  (uart_wdata),
-      .awready3(uart_awready),
-      .wready3 (uart_wready),
-      .bvalid3 (uart_bvalid),
-      .bresp3  (uart_bresp),
-    `endif
+      .arvalid  (arvalid),
+      .rready   (rready),
+      .araddr   (araddr),
+      .arready  (arready),
+      .rvalid   (rvalid),
+      .rresp    (rresp),
+      .rdata    (rdata),
+      .awvalid  (awvalid),
+      .wvalid   (wvalid),
+      .bready   (bready),
+      .wstrb    (wstrb),
+      .awaddr   (awaddr),
+      .wdata    (wdata),
+      .awready  (awready),
+      .wready   (wready),
+      .bvalid   (bvalid),
+      .bresp    (bresp),
+`ifndef CONFIG_YSYXSOC
+      .arvalid1 (sram_arvalid),
+      .rready1  (sram_rready),
+      .araddr1  (sram_araddr),
+      .arready1 (sram_arready),
+      .rvalid1  (sram_rvalid),
+      .rresp1   (sram_rresp),
+      .rdata1   (sram_rdata),
+      .awvalid1 (sram_awvalid),
+      .wvalid1  (sram_wvalid),
+      .bready1  (sram_bready),
+      .wstrb1   (sram_wstrb),
+      .awaddr1  (sram_awaddr),
+      .wdata1   (sram_wdata),
+      .awready1 (sram_awready),
+      .wready1  (sram_wready),
+      .bvalid1  (sram_bvalid),
+      .bresp1   (sram_bresp),
+`else
+      .arvalid1 (io_master_arvalid),
+      .rready1  (io_master_rready),
+      .araddr1  (io_master_araddr),
+      .arready1 (io_master_arready),
+      .rvalid1  (io_master_rvalid),
+      .rresp1   (io_master_rresp),
+      .rdata1   (io_master_rdata),
+      .awvalid1 (io_master_awvalid),
+      .wvalid1  (io_master_wvalid),
+      .bready1  (io_master_bready),
+      .wstrb1   (io_master_wstrb),
+      .awaddr1  (io_master_awaddr),
+      .wdata1   (io_master_wdata),
+      .awready1 (io_master_awready),
+      .wready1  (io_master_wready),
+      .bvalid1  (io_master_bvalid),
+      .bresp1   (io_master_bresp),
+`endif
+      .arvalid2 (clint_arvalid),
+      .rready2  (clint_rready),
+      .araddr2  (clint_araddr),
+      .arready2 (clint_arready),
+      .rvalid2  (clint_rvalid),
+      .rresp2   (clint_rresp),
+      .rdata2   (clint_rdata),
+      .high     (clint_high),
+`ifndef CONFIG_YSYXSOC
+      .arvalid3 (uart_arvalid),
+      .rready3  (uart_rready),
+      .araddr3  (uart_araddr),
+      .arready3 (uart_arready),
+      .rvalid3  (uart_rvalid),
+      .rresp3   (uart_rresp),
+      .rdata3   (uart_rdata),
+      .awvalid3 (uart_awvalid),
+      .wvalid3  (uart_wvalid),
+      .bready3  (uart_bready),
+      .wstrb3   (uart_wstrb),
+      .awaddr3  (uart_awaddr),
+      .wdata3   (uart_wdata),
+      .awready3 (uart_awready),
+      .wready3  (uart_wready),
+      .bvalid3  (uart_bvalid),
+      .bresp3   (uart_bresp),
+`endif
       .diff_skip(diff_skip)
   );
 
 `ifndef CONFIG_YSYXSOC
-  SRAM msram(
+  SRAM msram (
       .clk(clock),
       .rst(reset),
       .arvalid(sram_arvalid),
@@ -432,16 +441,16 @@ import "DPI-C" function void exu_finish_cal();
       .wstrb(sram_wstrb),
 
       .arready(sram_arready),
-      .rresp(sram_rresp),
-      .rvalid(sram_rvalid),
+      .rresp  (sram_rresp),
+      .rvalid (sram_rvalid),
       .awready(sram_awready),
-      .wready(sram_wready),
-      .bvalid(sram_bvalid),
-      .bresp(sram_bresp),
-      .rdata(sram_rdata)
-    );
-    
-    UART muart(
+      .wready (sram_wready),
+      .bvalid (sram_bvalid),
+      .bresp  (sram_bresp),
+      .rdata  (sram_rdata)
+  );
+
+  UART muart (
       .clk(clock),
       .rst(reset),
       .arvalid(uart_arvalid),
@@ -455,14 +464,14 @@ import "DPI-C" function void exu_finish_cal();
       .wstrb(uart_wstrb),
 
       .arready(uart_arready),
-      .rresp(uart_rresp),
-      .rvalid(uart_rvalid),
+      .rresp  (uart_rresp),
+      .rvalid (uart_rvalid),
       .awready(uart_awready),
-      .wready(uart_wready),
-      .bvalid(uart_bvalid),
-      .bresp(uart_bresp),
-      .rdata(uart_rdata)
-    );
+      .wready (uart_wready),
+      .bvalid (uart_bvalid),
+      .bresp  (uart_bresp),
+      .rdata  (uart_rdata)
+  );
 `endif
 
   ysyx_20020207_CLINT mclint (
@@ -472,9 +481,9 @@ import "DPI-C" function void exu_finish_cal();
       .rready(clint_rready),
       .araddr(clint_araddr),
       .arready(clint_arready),
-      .rresp  (clint_rresp),
-      .rvalid (clint_rvalid),
-      .rdata  (clint_rdata),
+      .rresp(clint_rresp),
+      .rvalid(clint_rvalid),
+      .rdata(clint_rdata),
       .high(clint_high)
   );
 
