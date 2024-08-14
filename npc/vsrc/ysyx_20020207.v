@@ -93,15 +93,16 @@ module ysyx_20020207 #(
       io_master_arburst = 'b0;
 `endif
 
-  wire pc_wen;
-
+  reg pc_wen;
+  wire pc_ready;
   ysyx_20020207_PC #(DATA_WIDTH) mpc (
       .clk (clock),
       .rst (reset),
       .wen (pc_wen),
       .upc (upc),
       .jump(jump),
-      .pc  (pc)
+      .pc  (pc),
+      .pc_ready(pc_ready)
   );
 
   reg diff;
@@ -113,6 +114,13 @@ module ysyx_20020207 #(
     end
   end
 
+  always@(posedge clock)begin
+    if(reset) pc_wen <= 0;
+    else if(lsu_finish)
+      pc_wen <= 1;
+    else
+      pc_wen <= 0;
+  end
 
   wire ifu_arready, ifu_arvalid, ifu_rready;
   wire ifu_rvalid;
@@ -121,10 +129,10 @@ module ysyx_20020207 #(
   wire [31:0] ifu_araddr;
   wire inst_valid;
   ysyx_20020207_IFU mifu (
-      .clk(clock),
-      .rst(reset),
-      .lsu_finish(lsu_finish),
+      .clock(clock),
+      .reset(reset),
       .pc(pc),
+      .pc_ready(pc_ready),
       .inst(inst),
       .io_master_rvalid(ifu_rvalid),
       .io_master_arready(ifu_arready),
@@ -133,7 +141,6 @@ module ysyx_20020207 #(
       .io_master_arvalid(ifu_arvalid),
       .io_master_rready(ifu_rready),
       .io_master_araddr(ifu_araddr),
-      .pc_wen(pc_wen),
       .inst_valid(inst_valid)
   );
   always @(posedge clock) begin
