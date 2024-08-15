@@ -2,7 +2,7 @@ module ysyx_20020207 #(
     DATA_WIDTH = 32
 ) (
     input clock,
-`ifdef CONFIG_YSYXSOC
+//`ifdef CONFIG_YSYXSOC
     input io_interrupt,
     input io_master_awready,
     output io_master_awvalid,
@@ -67,10 +67,10 @@ module ysyx_20020207 #(
     output [31:0] io_slave_rdata,
     output io_slave_rlast,
     output [3:0] io_slave_rid,
-`endif
+//`endif
     input reset
 );
-  import "DPI-C" function void exu_finish_cal();
+  //import "DPI-C" function void exu_finish_cal();
   wire [DATA_WIDTH-1 : 0] inst;
   reg [DATA_WIDTH-1 : 0] pc, upc;
   wire [31:0] result;
@@ -80,7 +80,7 @@ module ysyx_20020207 #(
   always @(posedge clock) begin
     is_diff_skip <= diff_skip;
   end
-`ifdef CONFIG_YSYXSOC
+//`ifdef CONFIG_YSYXSOC
   assign io_master_awid = 'b0,
       io_master_awlen = 'b0,
       io_master_awsize = func,
@@ -91,7 +91,7 @@ module ysyx_20020207 #(
       io_master_arsize    =   (load_ctl == 3'b000 || load_ctl == 3'b100) ? 3'b000 : 
                                 (load_ctl == 3'b001 || load_ctl == 3'b101 ? 3'b001 : 3'b010),
       io_master_arburst = 'b0;
-`endif
+//`endif
 
   reg pc_wen;
   wire pc_ready;
@@ -126,12 +126,12 @@ module ysyx_20020207 #(
   wire ifu_rvalid;
   wire [1:0] ifu_rresp;
   wire [31:0] ifu_rdata;
-  wire [31:0] ifu_araddr;
-  wire inst_valid;
+  wire [31:0] ifu_araddr, ifu_pc;
+  reg inst_valid;
   ysyx_20020207_IFU mifu (
       .clock(clock),
       .reset(reset),
-      .pc(pc),
+      .pc_in(pc),
       .pc_ready(pc_ready),
       .inst(inst),
       .io_master_rvalid(ifu_rvalid),
@@ -141,11 +141,12 @@ module ysyx_20020207 #(
       .io_master_arvalid(ifu_arvalid),
       .io_master_rready(ifu_rready),
       .io_master_araddr(ifu_araddr),
-      .inst_valid(inst_valid)
+      .inst_valid(inst_valid),
+      .pc_out(ifu_pc)
   );
-  always @(posedge clock) begin
+  /*always @(posedge clock) begin
     if (inst_valid) exu_finish_cal();
-  end
+  end*/
   wire [6:0] op;
   wire [2:0] func;
   wire [4:0] rs1, rs2, rd;
@@ -154,15 +155,19 @@ module ysyx_20020207 #(
   always @(posedge clock) begin
     is_exit <= inst == 32'b00000000000100000000000001110011;
   end
-
+  wire decode_valid;
   ysyx_20020207_IDU midu (
+      .clock(clock),
+      .reset(reset),
+      .inst_valid(inst_valid),
       .inst(inst),
-      .op  (op),
+      .op(op),
       .func(func),
-      .rs1 (rs1),
-      .rs2 (rs2),
-      .rd  (rd),
-      .imm (imm)
+      .rs1(rs1),
+      .rs2(rs2),
+      .rd(rd),
+      .imm(imm),
+      .decode_valid(decode_valid)
   );
 
   wire [DATA_WIDTH-1 : 0] src1, src2, reg_wdata;
@@ -193,13 +198,17 @@ module ysyx_20020207 #(
   wire mem_ren, alu_sub, alu_sign, exu_jump;
   wire [31:0] alu_result;
   wire [ 2:0] load_ctl;
+  wire crl_valid;
   ysyx_20020207_EXU #(DATA_WIDTH) mexu (
+      .clock(clock),
+      .reset(reset),
+      .decode_valid(decode_valid), 
       .op(op),
       .func(func),
       .src1(src1),
       .src2(src2),
       .imm(imm),
-      .pc(pc),
+      .pc(ifu_pc),
       .csr_rdata(csr_rdata),
       .upc(exu_upc),
       .alu_a(alu_a),
@@ -216,7 +225,8 @@ module ysyx_20020207 #(
       .sub(alu_sub),
       .sign(alu_sign),
       .wmask(wmask),
-      .load_ctl(load_ctl)
+      .load_ctl(load_ctl),
+      .crl_valid(crl_valid)
   );
 
   wire ZF, OF, CF, branch;
@@ -246,7 +256,7 @@ module ysyx_20020207 #(
   ysyx_20020207_LSU mlsu (
       .clk(clock),
       .rst(reset),
-      .inst_rvalid(inst_valid),
+      .crl_valid(crl_valid),
       .raddr(mem_raddr),
       .waddr(mem_waddr),
       .wdata(mem_wdata),
@@ -326,7 +336,7 @@ module ysyx_20020207 #(
       .wdata  (wdata),
       .wstrb  (wstrb)
   );
-`ifndef CONFIG_YSYXSOC
+/*`ifndef CONFIG_YSYXSOC
   wire sram_arvalid, sram_rready, sram_awvalid, sram_wvalid, sram_bready, sram_wready;
   wire sram_rvalid, sram_bvalid, sram_awready, sram_arready;
   wire [31:0] sram_araddr, sram_awaddr;
@@ -341,6 +351,7 @@ module ysyx_20020207 #(
   wire [3:0] uart_wstrb;
   wire [1:0] uart_rresp, uart_bresp;
 `endif
+*/
   wire clint_arvalid, clint_rready;
   wire clint_rvalid, clint_arready;
   wire [31:0] clint_araddr;
@@ -366,7 +377,7 @@ module ysyx_20020207 #(
       .wready   (wready),
       .bvalid   (bvalid),
       .bresp    (bresp),
-`ifndef CONFIG_YSYXSOC
+/*`ifndef CONFIG_YSYXSOC
       .arvalid1 (sram_arvalid),
       .rready1  (sram_rready),
       .araddr1  (sram_araddr),
@@ -384,7 +395,7 @@ module ysyx_20020207 #(
       .wready1  (sram_wready),
       .bvalid1  (sram_bvalid),
       .bresp1   (sram_bresp),
-`else
+`else*/
       .arvalid1 (io_master_arvalid),
       .rready1  (io_master_rready),
       .araddr1  (io_master_araddr),
@@ -402,7 +413,7 @@ module ysyx_20020207 #(
       .wready1  (io_master_wready),
       .bvalid1  (io_master_bvalid),
       .bresp1   (io_master_bresp),
-`endif
+//`endif
       .arvalid2 (clint_arvalid),
       .rready2  (clint_rready),
       .araddr2  (clint_araddr),
@@ -411,7 +422,7 @@ module ysyx_20020207 #(
       .rresp2   (clint_rresp),
       .rdata2   (clint_rdata),
       .high     (clint_high),
-`ifndef CONFIG_YSYXSOC
+/*`ifndef CONFIG_YSYXSOC
       .arvalid3 (uart_arvalid),
       .rready3  (uart_rready),
       .araddr3  (uart_araddr),
@@ -429,11 +440,11 @@ module ysyx_20020207 #(
       .wready3  (uart_wready),
       .bvalid3  (uart_bvalid),
       .bresp3   (uart_bresp),
-`endif
+`endif*/
       .diff_skip(diff_skip)
   );
 
-`ifndef CONFIG_YSYXSOC
+/*`ifndef CONFIG_YSYXSOC
   SRAM msram (
       .clk(clock),
       .rst(reset),
@@ -480,7 +491,7 @@ module ysyx_20020207 #(
       .rdata  (uart_rdata)
   );
 `endif
-
+*/
   ysyx_20020207_CLINT mclint (
       .clk(clock),
       .rst(reset),

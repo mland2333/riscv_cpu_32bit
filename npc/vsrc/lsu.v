@@ -1,8 +1,8 @@
-import "DPI-C" function void lsu_get_data();
+//import "DPI-C" function void lsu_get_data();
 module ysyx_20020207_LSU (
     input clk,
     rst,
-    inst_rvalid,
+    crl_valid,
     input [31:0] raddr,
     waddr,
     wdata,
@@ -160,7 +160,7 @@ module ysyx_20020207_LSU (
     end else begin
       case (read_state)
         IDLE: begin
-          if (ren && inst_rvalid) begin
+          if (ren && crl_valid) begin
             arvalid <= 1;
             io_master_araddr <= raddr;
             if (r_tran_nums == 1) read_state <= TRAN2;
@@ -173,7 +173,7 @@ module ysyx_20020207_LSU (
             arvalid <= 0;
             read_state <= IDLE;
             _rdata0 <= io_master_rdata;
-            lsu_get_data();
+            //lsu_get_data();
           end
         end
         TRAN2: begin
@@ -202,7 +202,7 @@ module ysyx_20020207_LSU (
     end else begin
       case (write_state)
         IDLE: begin
-          if (wen && inst_rvalid) begin
+          if (wen && crl_valid) begin
             awvalid <= wen;
             wvalid <= wen;
             io_master_awaddr <= waddr;
@@ -241,7 +241,7 @@ module ysyx_20020207_LSU (
   end
 
   always @(posedge clk) begin
-    lsu_finish <= (~lsu_finish) && ((inst_rvalid & ~wen &~ren)
+    lsu_finish <= (~lsu_finish) && ((crl_valid & ~wen &~ren)
                 || wen&&io_master_bvalid&&(write_state==TRAN1)
                 || ren&&io_master_rvalid&&(read_state ==TRAN1));
   end

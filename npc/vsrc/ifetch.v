@@ -1,12 +1,12 @@
-import "DPI-C" function void ifu_get_inst();
-import "DPI-C" function void idu_decode_inst(input int inst);
+//import "DPI-C" function void ifu_get_inst();
+//import "DPI-C" function void idu_decode_inst(input int inst);
 module ysyx_20020207_IFU(
   input clock, reset,
-  input [31:0] pc,
+  input [31:0] pc_in,
   input pc_ready,
 
   input  io_master_arready,
-  output reg io_master_arvalid,
+  output io_master_arvalid,
   output [31:0] io_master_araddr,
   
   output io_master_rready,
@@ -14,54 +14,64 @@ module ysyx_20020207_IFU(
   input  [1:0] io_master_rresp,
   input  [31:0] io_master_rdata,
 
-  output reg [31:0] inst,
-  output reg inst_valid
+  output [31:0]inst, pc_out,
+  output inst_valid
 );
+assign pc_out = io_master_araddr;
 
-always@(posedge clock)begin
+/*always@(posedge clock)begin
   if(io_master_rvalid)begin
-    ifu_get_inst();
-    idu_decode_inst(io_master_rdata);
+    //ifu_get_inst();
+    //idu_decode_inst(io_master_rdata);
   end
-end
+end*/
 
-`ifndef CONFIG_ICACHE
-assign io_master_araddr = pc;
+//`ifndef CONFIG_ICACHE
+reg[31:0] _inst;
+assign inst = _inst;
+reg _inst_valid;
+assign inst_valid = _inst_valid;
+reg _arvalid;
+assign io_master_arvalid = _arvalid;
+reg[31:0] araddr;
+assign io_master_araddr = araddr;
+
 assign io_master_rready = 1;
 always@(posedge clock)begin
   if(reset)begin
-    inst <= 0;
-    inst_valid <= 0;
+    _inst <= 0;
+    _inst_valid <= 0;
   end
   else if(io_master_rvalid)begin
-    inst <= io_master_rdata;
-    inst_valid <= 1;
+    _inst <= io_master_rdata;
+    _inst_valid <= 1;
   end
   else begin
-    inst_valid <= 0;
+    _inst_valid <= 0;
   end
 end
 
 always@(posedge clock)begin
   if(reset)
-    io_master_arvalid <= 0;
+    _arvalid <= 0;
   else begin
     if(pc_ready)begin
-      io_master_arvalid <= 1;
+      _arvalid <= 1;
+      araddr <= pc_in;
     end
     else begin
-      if(io_master_arready && io_master_arvalid)
-        io_master_arvalid <= 0;
+      if(io_master_arready && _arvalid)
+        _arvalid <= 0;
     end
   end
 end
-`else
+/*`else
 wire inst_require = pc_ready;
 ICACHE icache(
   .reset(reset),
   .clock(clock),
   .inst_require(inst_require),
-  .pc(pc),
+  .pc(pc_in),
   .inst_valid(inst_valid),
   .inst(inst),
   .arvalid(io_master_arvalid),
@@ -72,7 +82,7 @@ ICACHE icache(
   .araddr(io_master_araddr)
 );
 `endif
-
+*/
 endmodule
 
 
