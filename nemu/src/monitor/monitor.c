@@ -13,6 +13,7 @@
 * See the Mulan PSL v2 for more details.
 ***************************************************************************************/
 
+#include <stdio.h>
 #include <isa.h>
 #include <memory/paddr.h>
 #include <elf.h>
@@ -52,7 +53,6 @@ static long load_img() {
     Log("No image is given. Use the default build-in image.");
     return 4096; // built-in image size
   }
-
   FILE *fp = fopen(img_file, "rb");
   Assert(fp, "Can not open '%s'", img_file);
 
@@ -62,8 +62,7 @@ static long load_img() {
   Log("The image is %s, size = %ld", img_file, size);
 
   fseek(fp, 0, SEEK_SET);
-  
-  #ifdef CONFIG_TARGET_SHARE
+  #if defined(CONFIG_TARGET_SHARE) || defined(CONFIG_CACHESIM)
     extern uint8_t flash[];
     int ret = fread(flash, size, 1, fp);
   #else
@@ -208,7 +207,10 @@ void init_monitor(int argc, char *argv[]) {
   cpu.sr[MSTATUS] = 0x1800; 
   /* Initialize differential testing. */
   init_difftest(diff_so_file, img_size, difftest_port);
-  
+#ifdef CONFIG_ITRACE
+  extern void init_itrace(char*);
+  init_itrace(img_file);
+#endif
   /* Initialize the simple debugger. */
   init_sdb();
 #ifdef CONFIG_FTRACE

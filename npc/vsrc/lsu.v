@@ -1,4 +1,4 @@
-//import "DPI-C" function void lsu_get_data();
+import "DPI-C" function void lsu_get_data();
 module ysyx_20020207_LSU (
     input clk,
     rst,
@@ -173,7 +173,7 @@ module ysyx_20020207_LSU (
             arvalid <= 0;
             read_state <= IDLE;
             _rdata0 <= io_master_rdata;
-            //lsu_get_data();
+            lsu_get_data();
           end
         end
         TRAN2: begin

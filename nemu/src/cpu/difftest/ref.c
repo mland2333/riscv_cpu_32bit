@@ -20,7 +20,18 @@
 
 __EXPORT void difftest_memcpy(paddr_t addr, void *buf, size_t n,
                               bool direction) {
-  if (addr >= MROM_RADDR && addr < MROM_RADDR + MROM_SIZE) {
+  if (addr >= CONFIG_MBASE && addr < CONFIG_MBASE + CONFIG_MSIZE) {
+    if (direction == DIFFTEST_TO_DUT) {
+      for (int i = 0; i < n; i++) {
+        *((uint8_t *)(buf) + i) = *guest_to_host(addr + i);
+      }
+    } else {
+      for (int i = 0; i < n; i++) {
+        *guest_to_host(addr + i) = *((uint8_t *)(buf) + i);
+      }
+    }
+  }
+  else if (addr >= MROM_RADDR && addr < MROM_RADDR + MROM_SIZE) {
     if (direction == DIFFTEST_TO_DUT) {
       for (int i = 0; i < n; i++) {
         *((uint8_t *)(buf) + i) = *mrom_guest_to_host(addr + i);
@@ -72,17 +83,6 @@ __EXPORT void difftest_memcpy(paddr_t addr, void *buf, size_t n,
     } else {
       for (int i = 0; i < n; i++) {
         *sdram_guest_to_host(addr + i) = *((uint8_t *)(buf) + i);
-      }
-    }
-  }
-  else if (addr >= CONFIG_MBASE && addr < CONFIG_MBASE + CONFIG_MSIZE) {
-    if (direction == DIFFTEST_TO_DUT) {
-      for (int i = 0; i < n; i++) {
-        *((uint8_t *)(buf) + i) = *guest_to_host(addr + i);
-      }
-    } else {
-      for (int i = 0; i < n; i++) {
-        *guest_to_host(addr + i) = *((uint8_t *)(buf) + i);
       }
     }
   }

@@ -1,4 +1,6 @@
-/*`ifdef CONFIG_ICACHE
+`ifdef CONFIG_ICACHE
+import "DPI-C" function void cache_miss();
+import "DPI-C" function void cache_hit();
 module ICACHE #(
   CACHE_OFFSET=2,
   CACHE_INDEX=4,
@@ -8,8 +10,8 @@ module ICACHE #(
   input clock,
   input inst_require,
   input[31:0] pc,
-  output inst_valid,
-  output [31:0] inst,
+  output reg inst_valid,
+  output reg [31:0] inst,
   input rvalid, arready,
   output arvalid,
   output rready,
@@ -22,8 +24,7 @@ localparam REQUIRE = 3'b001;
 `define TAG  31:CACHE_OFFSET+CACHE_INDEX
 `define INDEX CACHE_INDEX + CACHE_OFFSET - 1 : CACHE_OFFSET
 
-reg _inst_valid, _arvalid;
-assign inst_valid = _inst_valid;
+reg _arvalid;
 assign arvalid = _arvalid;
 
 wire[31:6] tag = pc[31:6];
@@ -36,19 +37,22 @@ reg need_read;
 always@(posedge clock)begin
   if(reset)begin
     state <= IDLE;
-    _inst_valid <= 0;
+    inst_valid <= 0;
     need_read <= 0;
   end
   else begin
     case(state)
       IDLE:begin
-        _inst_valid <= 0;
+        inst_valid <= 0;
         if(inst_require)begin
-          if(cache[index][58] && cache[index][57:32] == tag)
-            _inst_valid <= 1;
+          if(cache[index][58] && cache[index][57:32] == tag)begin
+            inst_valid <= 1;
+            cache_hit();
+          end
           else begin
             need_read <= 1;
             state <= REQUIRE;
+            cache_miss();
           end
         end
       end
@@ -56,7 +60,7 @@ always@(posedge clock)begin
         need_read <= 0;
         if(rvalid)begin
           state <= IDLE;
-          _inst_valid <= 1;
+          inst_valid <= 1;
         end
       end
       default:begin
@@ -75,6 +79,7 @@ always@(posedge clock)begin
   else begin
     if(rvalid)begin
       cache[index] <= {1'b1, tag, rdata};
+    end
   end
 end
 
@@ -97,4 +102,4 @@ end
 
 endmodule
 
-`endif*/
+`endif

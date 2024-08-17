@@ -50,7 +50,7 @@ extern "C" void disassemble(char *str, int size, uint64_t pc, uint8_t *code,
 #define CONCAT(x, y) CONCAT_HELPER(x, y)
 #define TOP_MEMBER(m) CONCAT(TOP_PREFIX, m)
 
-TOP_NAME *top = NULL;
+TOP_NAME *top;
 std::unordered_map<std::string, std::function<int(char *)>> sdb_map;
 CPU_status cpu;
 uint32_t pc;
@@ -62,6 +62,21 @@ enum {
   EXECUTE,
   LSU,
   IFETCH,
+};
+
+struct CachePerf{
+  int miss = 0;
+  int hit = 0;
+  void cache_miss(){
+    miss ++;
+  }
+  void cache_hit(){
+    hit ++;
+  }
+
+  ~CachePerf(){
+    std::cout << std::format("cache_miss = {}\ncache_hit = {}\n", miss, hit);
+  }
 };
 
 class Performance {
@@ -145,16 +160,16 @@ public:
 };
 
 Performance perf;
-
+CachePerf cacheperf;
 extern "C" {
 
 void ifu_get_inst() { perf.ifu_get_inst(); }
-
 void lsu_get_data() { perf.lsu_get_data(); }
-
 void exu_finish_cal() { perf.exu_finish_cal(); }
-
 void idu_decode_inst(int inst) { perf.idu_decode_inst(inst); }
+
+void cache_miss() { cacheperf.cache_miss();}
+void cache_hit() { cacheperf.cache_hit();}
 }
 
 void cpu_update() {
@@ -165,7 +180,12 @@ void cpu_update() {
 }
 
 void sim_init() {
-  top = new TOP_NAME;
+  try{
+    top = new TOP_NAME;
+  } catch(const std::bad_alloc&e){
+    std::cerr << "Memory allocation failed: " << e.what() << std::endl;
+    assert(0);
+  }
 #ifdef CONFIG_GTKTRACE
   Verilated::traceEverOn(true);
   contextp = new VerilatedContext;
@@ -231,7 +251,7 @@ int exec_once() {
     perf_begin = true;
   if (perf_begin) {
     perf.clk_nums++;
-    if (TOP_MEMBER(inst_valid)) {
+    if (TOP_MEMBER(mifu__DOT___inst_valid)) {
       perf.inst_nums++;
       int fetch_clk = perf.clk_nums - perf.clk_rev;
       /* if (fetch_clk != 9) */

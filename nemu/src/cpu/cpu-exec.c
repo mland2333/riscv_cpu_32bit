@@ -33,6 +33,13 @@ static bool g_print_step = false;
 void device_update();
 
 #ifdef CONFIG_ITRACE
+    FILE* itrace;
+    void init_itrace(char* img){
+      assert(img != NULL);
+      char itrace_file[100] = "/home/mland/ysyx-workbench/cachesim/itrace.txt";
+      //strcat(itrace_file, img);
+      itrace = fopen(itrace_file, "w+");
+    }
     #define MAX_RING_BUFFER 10
     int buffer_index = 0;
     char ring_buffer[MAX_RING_BUFFER][128];
@@ -64,6 +71,9 @@ static void trace_and_difftest(Decode *_this, vaddr_t dnpc) {
   
   if (g_print_step) { IFDEF(CONFIG_ITRACE, puts(_this->logbuf)); }
   IFDEF(CONFIG_ITRACE, insert_buffer(_this->logbuf));
+  printf("%s\n", _this->logbuf);
+  assert(itrace != NULL);
+  IFDEF(CONFIG_ITRACE, fprintf(itrace, "%s\n", _this->logbuf));
   IFDEF(CONFIG_DIFFTEST, difftest_step(_this->pc, dnpc));
 #ifdef CONFIG_WATCHPOINT
   WP* wp = get_head();

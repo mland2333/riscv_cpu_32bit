@@ -1,5 +1,5 @@
-//import "DPI-C" function void ifu_get_inst();
-//import "DPI-C" function void idu_decode_inst(input int inst);
+import "DPI-C" function void ifu_get_inst();
+import "DPI-C" function void idu_decode_inst(input int inst);
 module ysyx_20020207_IFU(
   input clock, reset,
   input [31:0] pc_in,
@@ -19,18 +19,19 @@ module ysyx_20020207_IFU(
 );
 assign pc_out = io_master_araddr;
 
-/*always@(posedge clock)begin
+always@(posedge clock)begin
   if(io_master_rvalid)begin
-    //ifu_get_inst();
-    //idu_decode_inst(io_master_rdata);
+    ifu_get_inst();
+    idu_decode_inst(io_master_rdata);
   end
-end*/
-
-//`ifndef CONFIG_ICACHE
+end
 reg[31:0] _inst;
 assign inst = _inst;
 reg _inst_valid;
 assign inst_valid = _inst_valid;
+
+
+`ifndef CONFIG_ICACHE
 reg _arvalid;
 assign io_master_arvalid = _arvalid;
 reg[31:0] araddr;
@@ -65,15 +66,15 @@ always@(posedge clock)begin
     end
   end
 end
-/*`else
+`else
 wire inst_require = pc_ready;
 ICACHE icache(
   .reset(reset),
   .clock(clock),
   .inst_require(inst_require),
   .pc(pc_in),
-  .inst_valid(inst_valid),
-  .inst(inst),
+  .inst_valid(_inst_valid),
+  .inst(_inst),
   .arvalid(io_master_arvalid),
   .arready(io_master_arready),
   .rvalid(io_master_rvalid),
@@ -82,7 +83,7 @@ ICACHE icache(
   .araddr(io_master_araddr)
 );
 `endif
-*/
+
 endmodule
 
 

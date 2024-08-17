@@ -120,17 +120,17 @@ void psram_write(paddr_t addr, int len, word_t data) {
 
 
 static word_t pmem_read(paddr_t addr, int len) {
-  #ifdef CONFIG_MTRACE
-    printf("pmem_read , address: 0x%x, len: %d\n", addr, len);
-  #endif
   word_t ret = host_read(guest_to_host(addr), len);
+  #ifdef CONFIG_MTRACE
+    printf("pmem_read , address: 0x%x, len: %d, data:0x%x\n", addr, len, ret);
+  #endif
   /* if(addr == 0x80020ebc) printf("read data = 0x%x", ret); */
   return ret;
 }
 
 static void pmem_write(paddr_t addr, int len, word_t data) {
   #ifdef CONFIG_MTRACE
-    printf("pmem_write, address: 0x%x, len: %d\n", addr, len);
+    printf("pmem_write, address: 0x%x, len: %d, data:0x%x\n", addr, len, data);
   #endif
   host_write(guest_to_host(addr), len, data);
   /* if(addr == 0x80020ebc) printf("write data = 0x%x", data); */
@@ -152,7 +152,7 @@ void init_mem() {
 
 word_t paddr_read(paddr_t addr, int len) {
   if(in_pmem(addr)) return pmem_read(addr, len);
-#ifdef CONFIG_TARGET_SHARE
+#if defined(CONFIG_TARGET_SHARE) || defined(CONFIG_CACHESIM)
   else if(in_mrom(addr)) return mrom_read(addr, len);
   else if(in_sram(addr)) return sram_read(addr, len);
   else if(in_flash(addr)) return flash_read(addr, len);
@@ -166,10 +166,11 @@ word_t paddr_read(paddr_t addr, int len) {
 
 void paddr_write(paddr_t addr, int len, word_t data) {
   if (in_pmem(addr)) { pmem_write(addr, len, data); return; }
-#ifdef CONFIG_TARGET_SHARE
+#if defined(CONFIG_TARGET_SHARE) || defined(CONFIG_CACHESIM)
   else if (in_sram(addr)) { sram_write(addr, len, data); return; }
   else if (in_sdram(addr)){ sdram_write(addr, len, data); return;}
   else if (in_psram(addr)){ psram_write(addr, len, data); return;}
+  printf("here\n");
 #endif
   IFDEF(CONFIG_DEVICE, mmio_write(addr, len, data); return);
   out_of_bound(addr);
