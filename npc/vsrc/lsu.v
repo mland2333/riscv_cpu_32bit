@@ -2,14 +2,14 @@
 module ysyx_20020207_LSU (
     input clk,
     rst,
-    crl_valid,
+    alu_valid,
     input [31:0] raddr,
     waddr,
     wdata,
     input ren,
     wen,
     input [3:0] wmask,
-    input [2:0] load_ctl,
+    input [2:0] load_ctrl,
     output reg [31:0] rdata,
     output lsu_finish,
 
@@ -120,7 +120,7 @@ module ysyx_20020207_LSU (
         _rdata = _rdata0[31:0];
       end
       2'b01: begin
-        if (load_ctl[1]) begin
+        if (load_ctrl[1]) begin
           r_tran_nums = 1;
           _rdata = {_rdata0[7:0], _rdata1[31:8]};
         end else begin
@@ -129,7 +129,7 @@ module ysyx_20020207_LSU (
         end
       end
       2'b10: begin
-        if (load_ctl[1]) begin
+        if (load_ctrl[1]) begin
           r_tran_nums = 1;
           _rdata = {_rdata0[15:0], _rdata1[31:16]};
         end else begin
@@ -138,7 +138,7 @@ module ysyx_20020207_LSU (
         end
       end
       2'b11: begin
-        if (load_ctl[1] || load_ctl[0]) begin
+        if (load_ctrl[1] || load_ctrl[0]) begin
           r_tran_nums = 1;
           _rdata = {_rdata0[23:0], _rdata1[31:24]};
         end else begin
@@ -160,7 +160,7 @@ module ysyx_20020207_LSU (
     end else begin
       case (read_state)
         IDLE: begin
-          if (ren && crl_valid) begin
+          if (ren && alu_valid) begin
             arvalid <= 1;
             io_master_araddr <= raddr;
             if (r_tran_nums == 1) read_state <= TRAN2;
@@ -202,7 +202,7 @@ module ysyx_20020207_LSU (
     end else begin
       case (write_state)
         IDLE: begin
-          if (wen && crl_valid) begin
+          if (wen && alu_valid) begin
             awvalid <= wen;
             wvalid <= wen;
             io_master_awaddr <= waddr;
@@ -241,13 +241,13 @@ module ysyx_20020207_LSU (
   end
 
   always @(posedge clk) begin
-    lsu_finish <= (~lsu_finish) && ((crl_valid & ~wen &~ren)
+    lsu_finish <= (~lsu_finish) && ((alu_valid & ~wen &~ren)
                 || wen&&io_master_bvalid&&(write_state==TRAN1)
                 || ren&&io_master_rvalid&&(read_state ==TRAN1));
   end
 
   always @(*) begin
-    case (load_ctl)
+    case (load_ctrl)
       3'b000:  rdata = {{24{_rdata[7]}}, _rdata[7:0]};
       3'b001:  rdata = {{16{_rdata[15]}}, _rdata[15:0]};
       3'b010:  rdata = _rdata;

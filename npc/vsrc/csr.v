@@ -1,6 +1,6 @@
 module ysyx_20020207_CSRU(
   input clk, wen,
-  input[2:0] csr_ctl,
+  input[2:0] csr_ctrl,
   input [11:0]csr_addr,
   input[31:0] wdata, pc,
   input lsu_ready,
@@ -28,7 +28,7 @@ module ysyx_20020207_CSRU(
 
    always @(posedge clk) begin
      if (lsu_ready && wen) begin
-      case(csr_ctl)
+      case(csr_ctrl)
         `CSRW:  begin csr[addr_map] <= wdata; end
         `ECALL: begin csr[MEPC] <= pc; csr[MCAUSE] <= 32'h0b; end
         default: begin end
@@ -37,7 +37,7 @@ module ysyx_20020207_CSRU(
   end
 
   always@(*)begin
-    case(csr_ctl)
+    case(csr_ctrl)
       `MRET:  begin upc = csr[MEPC]; end
       `ECALL: begin upc = csr[MTVEC]; end
       default begin upc = 0; end
