@@ -14,7 +14,7 @@ module ysyx_20020207_IFU(
   input  [1:0] io_master_rresp,
   input  [31:0] io_master_rdata,
 
-  output [31:0]inst, pc_out,
+  output reg[31:0]inst, pc_out,
   output inst_valid
 );
 assign pc_out = io_master_araddr;
@@ -25,8 +25,6 @@ always@(posedge clock)begin
     idu_decode_inst(io_master_rdata);
   end
 end
-reg[31:0] _inst;
-assign inst = _inst;
 reg _inst_valid;
 assign inst_valid = _inst_valid;
 
@@ -40,11 +38,11 @@ assign io_master_araddr = araddr;
 assign io_master_rready = 1;
 always@(posedge clock)begin
   if(reset)begin
-    _inst <= 0;
+    inst <= 0;
     _inst_valid <= 0;
   end
   else if(io_master_rvalid)begin
-    _inst <= io_master_rdata;
+    inst <= io_master_rdata;
     _inst_valid <= 1;
   end
   else begin
@@ -74,7 +72,7 @@ ICACHE icache(
   .inst_require(inst_require),
   .pc(pc_in),
   .inst_valid(_inst_valid),
-  .inst(_inst),
+  .inst(inst),
   .arvalid(io_master_arvalid),
   .arready(io_master_arready),
   .rvalid(io_master_rvalid),

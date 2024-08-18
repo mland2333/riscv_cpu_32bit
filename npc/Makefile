@@ -23,6 +23,8 @@ else
 	VERILATOR_CFLAGS += --top-module ysyx_20020207
 endif
 
+VERILATOR_CFLAGS += -DCONFIG_ICACHE
+
 BUILD_DIR = ./build
 OBJ_DIR = $(BUILD_DIR)/obj_dir
 BIN = $(BUILD_DIR)/$(TOPNAME)
@@ -84,13 +86,13 @@ ifneq ($(strip $(ELF)),)
 endif
 
 OBJCACHE = ccache
-CC = ccache gcc
-CXX = ccache g++
+#CC = ccache gcc
+#CXX = ccache g++
 
 DIFF_NUME_SO = $(NEMU_HOME)/build/riscv32-nemu-interpreter-so
 
 ifneq ($(strip $(DIFF_NUME_SO)),)
-	# CFLAGS += -DCONFIG_DIFFTEST
+	CFLAGS += -DCONFIG_DIFFTEST
 	CFLAGS += -l$(DIFF_NUME_SO)
 	RUNFLAGS += -d $(DIFF_NUME_SO)
 endif

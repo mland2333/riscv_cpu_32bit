@@ -52,7 +52,7 @@ always@(posedge clk)begin
       //if(read_delay_over)begin
         rvalid <= 1;
         rresp <= 0;
-        //rdata <= pmem_read(_raddr);
+        rdata <= pmem_read(_raddr);
         need_read <= 0;
         //read_delay_start <= 0;
       //end
@@ -91,7 +91,7 @@ always@(posedge clk)begin
   else begin
     if(need_write)begin
       wready <= 1;
-      //pmem_write(_waddr, _wdata, {4'b0, wstrb});
+      pmem_write(_waddr, _wdata, {4'b0, wstrb});
       need_write <= 0;
     end
     else begin
