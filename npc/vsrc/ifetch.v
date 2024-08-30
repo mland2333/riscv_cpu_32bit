@@ -9,7 +9,7 @@ module ysyx_20020207_IFU(
   output io_master_arvalid,
   output [31:0] io_master_araddr,
   
-  output io_master_rready,
+  output reg io_master_rready,
   input  io_master_rvalid,
   input  [1:0] io_master_rresp,
   input  [31:0] io_master_rdata,
@@ -35,18 +35,24 @@ assign io_master_arvalid = _arvalid;
 reg[31:0] araddr;
 assign io_master_araddr = araddr;
 
-assign io_master_rready = 1;
+//assign io_master_rready = 1;
 always@(posedge clock)begin
   if(reset)begin
     inst <= 0;
     _inst_valid <= 0;
   end
+  else if(io_master_rvalid && io_master_rready)begin
+    io_master_rready <= 0;
+    _inst_valid <= 0;
+  end
   else if(io_master_rvalid)begin
     inst <= io_master_rdata;
+    io_master_rready <= 1;
     _inst_valid <= 1;
   end
   else begin
     _inst_valid <= 0;
+    io_master_rready <= 0;
   end
 end
 

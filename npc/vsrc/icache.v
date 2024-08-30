@@ -3,8 +3,8 @@ import "DPI-C" function void cache_miss();
 import "DPI-C" function void cache_hit();
 import "DPI-C" function void cache_init();
 module ICACHE #(
-  CACHE_OFFSET=2,
-  CACHE_INDEX=4
+  ICACHE_SIZE=1,
+  ICACHE_NUMS=16
 )(
   input reset,
   input clock,
@@ -14,20 +14,45 @@ module ICACHE #(
   output reg [31:0] inst,
   input rvalid, arready,
   output arvalid,
-  output rready,
+  output reg rready,
   input [31:0] rdata,
   output [31:0] araddr
+
 );
 localparam IDLE = 3'b0;
 localparam REQUIRE = 3'b001;
 
+
+`define TAG 31 : $clog2(ICACHE_SIZE*ICACHE_NUMS) + 2
+localparam TAG_SIZE = (32 - $clog2(ICACHE_SIZE*ICACHE_NUMS) - 2);
+
+`define INDEX $clog2(ICACHE_SIZE*ICACHE_NUMS) + 2 - 1: $clog2(ICACHE_SIZE) + 2
+localparam INDEX_SIZE = $clog2(ICACHE_NUMS);
+
+localparam ICACHE_LINE = 32*ICACHE_SIZE + TAG_SIZE + 1;
+localparam VALID = ICACHE_LINE - 1;
+
+`define ICACHE_TAG VALID - 1 : 32*ICACHE_SIZE
+
 reg _arvalid;
 assign arvalid = _arvalid;
 
-wire[31:6] tag = pc[31:6];
-wire[3:0] index = pc[5:2];
-reg[58:0] cache[16];
+wire[TAG_SIZE-1 : 0] tag = pc[`TAG];
+wire[INDEX_SIZE - 1 : 0] index = pc[`INDEX];
 
+reg[ICACHE_LINE - 1:0] icache[ICACHE_NUMS];
+
+integer i;
+
+`ifdef CONFIG_BURST
+wire[31:0] insts[ICACHE_SIZE];
+always@ * begin
+  for(i = 0; i< ICACHE_SIZE; i=i+1)begin
+    insts[i] = icache[index][32*i +: 32];
+  end
+end
+
+`else
 reg[2:0] state;
 reg need_read;
 always@(posedge clock)begin
@@ -44,9 +69,9 @@ always@(posedge clock)begin
         inst_valid <= 0;
         if(inst_require)begin
           _araddr <= pc;
-          if(cache[index][58] && cache[index][57:32] == tag)begin
+          if(icache[index][VALID] && icache[index][`ICACHE_TAG] == tag)begin
             inst_valid <= 1;
-            inst <= cache[index][31:0];
+            inst <= icache[index][31:0];
             cache_hit();
           end
           else begin
@@ -59,9 +84,14 @@ always@(posedge clock)begin
       end
       REQUIRE:begin
         need_read <= 0;
-        if(rvalid)begin
-          inst <= rdata;
+        if(rready)begin
+          rready <= 0;
           state <= IDLE;
+          inst_valid <= 0;
+        end
+        else if(rvalid)begin
+          rready <= 1;
+          inst <= rdata;
           inst_valid <= 1;
         end
       end
@@ -71,23 +101,22 @@ always@(posedge clock)begin
   end
 end
 
-integer i;
 always@(posedge clock)begin
   if(reset)begin
     for(i=0;i<16;i=i+1)begin
-      cache[i][58] = 0;
+      icache[i][VALID] = 0;
     end
   end
   else begin
     if(rvalid)begin
-      cache[index] <= {1'b1, tag, rdata};
+      icache[index] <= {1'b1, tag, rdata};
     end
   end
 end
 
 reg[31:0] _araddr;
 assign araddr = _araddr;
-assign rready = 1;
+//assign rready = 1;
 always@(posedge clock)begin
   if(reset)begin
     _arvalid <= 0;
@@ -100,6 +129,7 @@ always@(posedge clock)begin
       _arvalid <= 0;
   end
 end
+`endif
 
 endmodule
 

@@ -61,12 +61,12 @@ always@(posedge clk)begin
         end
       end
       MEM1_READ:begin
-        if(rvalid)begin
+        if(rvalid && rready)begin
           read_state <= IDLE_READ;
         end
       end
       MEM2_READ:begin
-        if(rvalid)begin
+        if(rvalid && rready)begin
           read_state <= IDLE_READ;
         end
       end
