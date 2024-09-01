@@ -87,10 +87,16 @@ module ysyx_20020207 #(
       io_master_awburst = 'b0,
       io_master_wlast = 'b1,
       io_master_arid = 'b0,
-      io_master_arlen = 'b0,
+    `ifdef CONFIG_BURST
+      io_master_arlen = is_ifu ? ifu_arlen : 8'b0,
+      io_master_arsize = is_ifu ? ifu_arsize : 3'b010,
+      io_master_arburst = is_ifu ? ifu_arburst : 2'b0;
+    `else
+      io_master_arlen = 8'b0,
       io_master_arsize  = 3'b010/*(load_ctrl == 3'b000 || load_ctrl == 3'b100) ? 3'b000 : 
                                 (load_ctrl == 3'b001 || load_ctrl == 3'b101 ? 3'b001 : 3'b010)*/,
-      io_master_arburst = 'b0;
+      io_master_arburst = 2'b0;
+    `endif
   `endif
 
   reg  pc_wen;
@@ -119,12 +125,22 @@ module ysyx_20020207 #(
     else if (lsu_finish) pc_wen <= 1;
     else pc_wen <= 0;
   end
+  
+  reg is_ifu;
+  always@(posedge clock)begin
+    if(reset) is_ifu <= 0;
+    else if(pc_ready) is_ifu <= 1;
+    else if(inst_valid) is_ifu <= 0;
+  end
 
   wire ifu_arready, ifu_arvalid, ifu_rready;
-  wire ifu_rvalid;
+  wire ifu_rvalid, ifu_rlast;
   wire [1:0] ifu_rresp;
   wire [31:0] ifu_rdata;
   wire [31:0] ifu_araddr, ifu_pc;
+  wire [7:0] ifu_arlen;
+  wire [2:0] ifu_arsize;
+  wire [1:0] ifu_arburst;
   reg inst_valid;
   ysyx_20020207_IFU mifu (
       .clock(clock),
@@ -141,6 +157,13 @@ module ysyx_20020207 #(
       .io_master_araddr(ifu_araddr),
       .inst_valid(inst_valid),
       .pc_out(ifu_pc)
+    `ifdef CONFIG_BURST
+      ,
+      .io_master_arlen(ifu_arlen),
+      .io_master_arsize(ifu_arsize),
+      .io_master_arburst(ifu_arburst),
+      .io_master_rlast(ifu_rlast)
+    `endif
   );
   always @(posedge clock) begin
     if (ctrl_valid) exu_finish_cal();
@@ -286,7 +309,7 @@ module ysyx_20020207 #(
       .io_master_wstrb(lsu_wstrb)
   );
   wire [3:0] wstrb;
-  wire rvalid, arready, arvalid, rready, awvalid, wvalid, bready, awready, bvalid, wready;
+  wire rvalid, arready, arvalid, rready, awvalid, wvalid, bready, awready, bvalid, wready, rlast;
   wire [31:0] araddr, awaddr;
   wire [31:0] wdata, rdata;
   ysyx_20020207_ARBITER marbiter (
@@ -300,7 +323,9 @@ module ysyx_20020207 #(
       .rvalid1 (ifu_rvalid),
       .rresp1  (ifu_rresp),
       .rdata1  (ifu_rdata),
-
+    `ifdef CONFIG_BURST
+      .rlast1  (ifu_rlast),
+    `endif
       .arvalid2(lsu_arvalid),
       .rready2 (lsu_rready),
       .araddr2 (lsu_araddr),
@@ -336,6 +361,10 @@ module ysyx_20020207 #(
       .awaddr (awaddr),
       .wdata  (wdata),
       .wstrb  (wstrb)
+    `ifdef CONFIG_BURST
+      ,
+      .rlast  (io_master_rlast)
+    `endif
   );
 `ifndef CONFIG_YSYXSOC
   wire sram_arvalid, sram_rready, sram_awvalid, sram_wvalid, sram_bready, sram_wready;

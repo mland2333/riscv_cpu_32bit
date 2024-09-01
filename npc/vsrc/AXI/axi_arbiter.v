@@ -6,6 +6,7 @@ module ysyx_20020207_ARBITER(
   output reg arready1, rvalid1,
   output reg[1:0] rresp1,
   output reg[31:0] rdata1,
+  output rlast1,
   //写通道1
   //input awvalid1, wvalid1, bready1,
   //input [7:0] wstrb1,
@@ -27,7 +28,7 @@ module ysyx_20020207_ARBITER(
   output reg awready2, wready2, bvalid2,
   output reg[1:0] bresp2,
   //与sram连接通道
-  input arready, rvalid, awready, wready, bvalid,
+  input arready, rvalid, awready, wready, bvalid, rlast,
   input [1:0] rresp, bresp,
   input [31:0] rdata,
   output reg arvalid, rready, awvalid, wvalid, bready, 
@@ -60,6 +61,18 @@ always@(posedge clk)begin
           read_state <= MEM2_READ;
         end
       end
+    `ifdef CONFIG_BURST
+      MEM1_READ:begin
+        if(rlast1)begin
+          read_state <= IDLE_READ;
+        end
+      end
+      MEM2_READ:begin
+        if(rvalid && rready)begin
+          read_state <= IDLE_READ;
+        end
+      end
+    `else
       MEM1_READ:begin
         if(rvalid && rready)begin
           read_state <= IDLE_READ;
@@ -70,6 +83,7 @@ always@(posedge clk)begin
           read_state <= IDLE_READ;
         end
       end
+    `endif
       default:begin
         read_state <= IDLE_READ;
       end
@@ -101,6 +115,7 @@ assign arready1 = read_state == MEM1_READ ? arready : 0;
 assign rvalid1 = read_state == MEM1_READ ? rvalid : 0;
 assign rresp1 = read_state == MEM1_READ ? rresp : 0;
 assign rdata1 = read_state == MEM1_READ ? rdata : 0;
+assign rlast1 = read_state == MEM1_READ ? rlast : 0;
 
 assign arready2 = read_state == MEM2_READ ? arready : 0;
 assign rvalid2 = read_state == MEM2_READ ? rvalid : 0;

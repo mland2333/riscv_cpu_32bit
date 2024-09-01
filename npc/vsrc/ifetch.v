@@ -16,8 +16,18 @@ module ysyx_20020207_IFU(
 
   output reg[31:0]inst, pc_out,
   output inst_valid
+`ifdef CONFIG_BURST
+  ,
+  output [7:0] io_master_arlen,
+  output [2:0] io_master_arsize,
+  output [1:0] io_master_arburst,
+  input io_master_rlast
+`endif
 );
-assign pc_out = io_master_araddr;
+
+always@(posedge clock)begin
+  if(pc_ready) pc_out <= pc_in;
+end
 
 always@(posedge clock)begin
   if(io_master_rvalid)begin
@@ -85,6 +95,13 @@ ICACHE icache(
   .rready(io_master_rready),
   .rdata(io_master_rdata),
   .araddr(io_master_araddr)
+`ifdef CONFIG_BURST
+    ,
+  .arlen(io_master_arlen),
+  .arsize(io_master_arsize),
+  .arburst(io_master_arburst),
+  .rlast(io_master_rlast)
+`endif
 );
 `endif
 
