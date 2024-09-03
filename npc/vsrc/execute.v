@@ -14,6 +14,7 @@ module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     output reg upc_ctrl, sub, sign,
     output reg[3:0] wmask,
     output reg[2:0] load_ctrl,
+    output fencei,
     output reg ctrl_valid
 );
 reg[6:0] _op;
@@ -72,6 +73,7 @@ end
         jump = 0;
         upc_ctrl = 0;
         load_ctrl = 0;
+        fencei = 0;
         case(_op)
             7'b0010011:begin //I
                 alu_b = _imm;
@@ -234,9 +236,15 @@ end
                   csr_ctrl = 0;
                 end
               endcase
-
+            end
+            7'b0001111:begin
+              if(func == 001)begin
+                fencei = 1;
+                reg_wen = 0;
+              end
             end
             default:begin
+                fencei = 0;
                 wmask = 0;
                 alu_a = _src1;
                 alu_b = _src2;

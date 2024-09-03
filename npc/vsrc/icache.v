@@ -1,29 +1,32 @@
-`ifdef CONFIG_ICACHE
+/*`ifdef CONFIG_ICACHE
 import "DPI-C" function void cache_miss();
 import "DPI-C" function void cache_hit();
 import "DPI-C" function void cache_init();
+*/
 module ICACHE #(
   ICACHE_SIZE=4,
-  ICACHE_NUMS=16
+  ICACHE_NUMS=4
 )(
   input reset,
   input clock,
   input inst_require,
   input[31:0] pc,
+  input fencei, ctrl_valid,
   output reg inst_valid,
   output reg [31:0] inst,
   input rvalid, arready,
   output reg arvalid,
   output rready,
   input [31:0] rdata,
+
   output [31:0] araddr
-  `ifdef CONFIG_BURST
+//  `ifdef CONFIG_BURST
     ,
   output[7:0] arlen,
   output[2:0] arsize,
   output[1:0] arburst,
   input rlast
-  `endif
+//  `endif
 );
 localparam IDLE = 3'b0;
 localparam REQUIRE = 3'b001;
@@ -45,10 +48,11 @@ wire[TAG_SIZE-1 : 0] tag = pc[`TAG];
 wire[INDEX_SIZE - 1 : 0] index = pc[`INDEX];
 
 reg[ICACHE_LINE - 1:0] icache[ICACHE_NUMS];
+reg refresh;
 
 integer i;
 
-`ifdef CONFIG_BURST
+//`ifdef CONFIG_BURST
 localparam OFFEST_SIZE = $clog2(ICACHE_SIZE);
 `define OFFEST OFFEST_SIZE + 1 : 2
 
@@ -59,7 +63,7 @@ assign arsize = 3'b010;
 assign arburst = 2'b01;
 
 always@ * begin
-  for(i = 0; i< ICACHE_SIZE; i=i+1)begin
+  for(i = 0; i<ICACHE_SIZE; i=i+1)begin
     insts[i] = icache[index][32*i +: 32];
   end
 end
@@ -99,16 +103,16 @@ end
 
 always@(posedge clock)begin
   if(reset)begin
-    cache_init();
+    //cache_init();
     inst <= 0;
   end
   else begin
     if(inst_require && !need_read)begin
-      cache_hit();
+      //cache_hit();
       inst <= insts[offest];
     end
     else if(burst_nums == ICACHE_SIZE)begin
-      cache_miss();
+      //cache_miss();
       inst <= insts[offest];
     end
   end
@@ -144,14 +148,26 @@ always@(posedge clock)begin
 end
 
 always@(posedge clock)begin
-  if(rvalid) icache[index][32*burst_nums +: 32] <= rdata;
-  if(rlast) begin
-    icache[index][VALID] <= 1;
-    icache[index][`ICACHE_TAG] <= tag;
+  if(reset)begin
+    for(i=0; i<ICACHE_NUMS; i++)begin
+      icache[i][VALID] <= 0;
+    end
+  end
+  else begin
+    if(rvalid) icache[index][32*burst_nums +: 32] <= rdata;
+    if(rlast) begin
+      icache[index][VALID] <= 1;
+      icache[index][`ICACHE_TAG] <= tag;
+    end
+    else if(ctrl_valid && fencei)begin
+      for(i=0; i<ICACHE_NUMS; i++)begin
+        icache[i][VALID] <= 0;
+      end
+    end
   end
 end
 
-`else
+/*`else
 reg[2:0] state;
 reg need_read;
 
@@ -221,7 +237,7 @@ always@(posedge clock)begin
       arvalid <= 0;
   end
 end
-`endif
+`endif*/
 endmodule
 
-`endif
+//`endif

@@ -176,6 +176,4 @@ module ysyx_20020207_ALU(
             CMP  : result = cmp_result;
         endcase
     end
-
-
 endmodule

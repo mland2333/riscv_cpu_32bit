@@ -1,4 +1,4 @@
-`ifndef CONFIG_YSYXSOC
+/*`ifndef CONFIG_YSYXSOC
 
 import "DPI-C" function int pmem_read(input int raddr);
 import "DPI-C" function void pmem_write(
@@ -120,4 +120,4 @@ always@(posedge clk)begin
 end
 
 endmodule
-`endif
+`endif*/

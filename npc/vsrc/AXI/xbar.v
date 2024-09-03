@@ -24,7 +24,7 @@ module ysyx_20020207_XBAR(
   output reg arvalid2, rready2, 
   output reg [31:0] araddr2, 
   output reg high,
-`ifndef CONFIG_YSYXSOC
+/*`ifndef CONFIG_YSYXSOC
   //uart
   input arready3, rvalid3, awready3, wready3, bvalid3,
   input [1:0] rresp3, bresp3,
@@ -34,22 +34,22 @@ module ysyx_20020207_XBAR(
   output reg [31:0] wdata3,
   output reg [3:0] wstrb3,
 `endif
-
+*/
   output diff_skip
 );
 
 `define DEVICE_BASE 32'ha0000000
 
-`ifdef CONFIG_YSYXSOC
+//`ifdef CONFIG_YSYXSOC
 `define UART 32'h10000000
 `define RTC_ADDR 32'h2000bff8
 `define RTC_ADDR_HIGH 32'h2000bffc
-`else 
+/*`else 
 `define UART 32'ha00003f8
 `define RTC_ADDR 32'ha0000048
 `define RTC_ADDR_HIGH 32'ha000004c
 `endif
-
+*/
 `define FLASH_BASE 32'h30000000
 `define FLASH_SIZE 32'h10000000
 
@@ -144,12 +144,12 @@ always@(*)begin
   rready2 = 0;
   araddr2 = 0;
 
-`ifndef CONFIG_YSYXSOC
+/*`ifndef CONFIG_YSYXSOC
   arvalid3 = 0;
   rready3 = 0;
   araddr3 = 0;
 `endif
-
+*/
   arready = 0;
   rvalid = 0;
   rresp = 0;
@@ -163,7 +163,7 @@ always@(*)begin
     rresp = rresp2;
     rdata = rdata2;
   end
-`ifndef CONFIG_YSYXSOC
+/*`ifndef CONFIG_YSYXSOC
   else if(read_zone == UART_ZONE)begin
     arvalid3 = arvalid;
     rready3 = rready;
@@ -173,7 +173,7 @@ always@(*)begin
     rresp = rresp3;
     rdata = rdata3;
   end
-`endif
+`endif*/
   else begin
     arvalid1 = arvalid;
     rready1 = rready;
@@ -186,7 +186,7 @@ always@(*)begin
 end
 
 always@(*)begin
-`ifdef CONFIG_YSYXSOC
+//`ifdef CONFIG_YSYXSOC
   awvalid1 = awvalid;
   wvalid1 = wvalid;
   bready1 = bready;
@@ -197,7 +197,7 @@ always@(*)begin
   wready = wready1;
   bvalid = bvalid1;
   bresp = bresp1;
-`else
+/*`else
   awvalid1 = 0;
   wvalid1 = 0;
   bready1 = 0;
@@ -235,5 +235,6 @@ always@(*)begin
     bresp = bresp1;
   end
 `endif
+*/
 end
 endmodule

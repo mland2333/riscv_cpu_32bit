@@ -10,11 +10,11 @@ module ysyx_20020207_PC#(DATA_WIDTH) (
     always@(posedge clk)begin
         //pc_wen <= wen;
         if(rst) begin
-          `ifdef CONFIG_YSYXSOC
+          //`ifdef CONFIG_YSYXSOC
           pc <= 32'h30000000;
-          `else
-          pc <= 32'h80000000;
-          `endif
+          //`else
+          //pc <= 32'h80000000;
+          //`endif
           pc_ready <= 0;
           after_rst <= 1;
         end

@@ -61,7 +61,7 @@ always@(posedge clk)begin
           read_state <= MEM2_READ;
         end
       end
-    `ifdef CONFIG_BURST
+    //`ifdef CONFIG_BURST
       MEM1_READ:begin
         if(rlast1)begin
           read_state <= IDLE_READ;
@@ -72,7 +72,7 @@ always@(posedge clk)begin
           read_state <= IDLE_READ;
         end
       end
-    `else
+    /*`else
       MEM1_READ:begin
         if(rvalid && rready)begin
           read_state <= IDLE_READ;
@@ -83,7 +83,7 @@ always@(posedge clk)begin
           read_state <= IDLE_READ;
         end
       end
-    `endif
+    `endif*/
       default:begin
         read_state <= IDLE_READ;
       end

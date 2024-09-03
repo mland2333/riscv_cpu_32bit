@@ -2,7 +2,7 @@ module ysyx_20020207 #(
     DATA_WIDTH = 32
 ) (
     input clock,
-    `ifdef CONFIG_YSYXSOC
+    //`ifdef CONFIG_YSYXSOC
     input io_interrupt,
     input io_master_awready,
     output io_master_awvalid,
@@ -67,10 +67,10 @@ module ysyx_20020207 #(
     output [31:0] io_slave_rdata,
     output io_slave_rlast,
     output [3:0] io_slave_rid,
-    `endif
+    //`endif
     input reset
 );
-  import "DPI-C" function void exu_finish_cal();
+  //import "DPI-C" function void exu_finish_cal();
   wire [DATA_WIDTH-1 : 0] inst;
   reg [DATA_WIDTH-1 : 0] pc, upc;
   wire [31:0] result;
@@ -80,24 +80,23 @@ module ysyx_20020207 #(
   always @(posedge clock) begin
     is_diff_skip <= diff_skip;
   end
-  `ifdef CONFIG_YSYXSOC
+  //`ifdef CONFIG_YSYXSOC
   assign io_master_awid = 'b0,
       io_master_awlen = 'b0,
       io_master_awsize = 3'b010,
       io_master_awburst = 'b0,
       io_master_wlast = 'b1,
       io_master_arid = 'b0,
-    `ifdef CONFIG_BURST
+    //`ifdef CONFIG_BURST
       io_master_arlen = is_ifu ? ifu_arlen : 8'b0,
       io_master_arsize = is_ifu ? ifu_arsize : 3'b010,
       io_master_arburst = is_ifu ? ifu_arburst : 2'b0;
-    `else
+    /*`else
       io_master_arlen = 8'b0,
-      io_master_arsize  = 3'b010/*(load_ctrl == 3'b000 || load_ctrl == 3'b100) ? 3'b000 : 
-                                (load_ctrl == 3'b001 || load_ctrl == 3'b101 ? 3'b001 : 3'b010)*/,
+      io_master_arsize  = 3'b010,
       io_master_arburst = 2'b0;
     `endif
-  `endif
+  `endif*/
 
   reg  pc_wen;
   wire pc_ready;
@@ -156,18 +155,20 @@ module ysyx_20020207 #(
       .io_master_rready(ifu_rready),
       .io_master_araddr(ifu_araddr),
       .inst_valid(inst_valid),
+      .fencei(fencei),
+      .ctrl_valid(ctrl_valid),
       .pc_out(ifu_pc)
-    `ifdef CONFIG_BURST
+    //`ifdef CONFIG_BURST
       ,
       .io_master_arlen(ifu_arlen),
       .io_master_arsize(ifu_arsize),
       .io_master_arburst(ifu_arburst),
       .io_master_rlast(ifu_rlast)
-    `endif
+    //`endif
   );
-  always @(posedge clock) begin
+  /*always @(posedge clock) begin
     if (ctrl_valid) exu_finish_cal();
-  end
+  end*/
   wire [6:0] op;
   wire [2:0] func;
   wire [4:0] rs1, rs2, rd;
@@ -193,16 +194,16 @@ module ysyx_20020207 #(
 
   wire [DATA_WIDTH-1 : 0] src1, src2, reg_wdata;
   wire reg_wen;
-  ysyx_20020207_RegisterFile #(5, DATA_WIDTH) mreg (
+  ysyx_20020207_RegisterFile #(4, DATA_WIDTH) mreg (
       .clk(clock),
       .rst(reset),
       .lsu_finish(lsu_finish),
       .rdata1(src1),
-      .raddr1(rs1),
+      .raddr1(rs1[3:0]),
       .rdata2(src2),
-      .raddr2(rs2),
+      .raddr2(rs2[3:0]),
       .wdata(reg_wdata),
-      .waddr(rd),
+      .waddr(rd[3:0]),
       .wen(reg_wen)
   );
 
@@ -220,6 +221,7 @@ module ysyx_20020207 #(
   wire [31:0] alu_result;
   wire [2:0] load_ctrl;
   wire ctrl_valid;
+  wire fencei;
   ysyx_20020207_EXU #(DATA_WIDTH) mexu (
       .clock(clock),
       .reset(reset),
@@ -247,6 +249,7 @@ module ysyx_20020207 #(
       .sign(alu_sign),
       .wmask(wmask),
       .load_ctrl(load_ctrl),
+      .fencei(fencei),
       .ctrl_valid(ctrl_valid)
   );
   wire alu_valid;
@@ -323,9 +326,9 @@ module ysyx_20020207 #(
       .rvalid1 (ifu_rvalid),
       .rresp1  (ifu_rresp),
       .rdata1  (ifu_rdata),
-    `ifdef CONFIG_BURST
+    //`ifdef CONFIG_BURST
       .rlast1  (ifu_rlast),
-    `endif
+    //`endif
       .arvalid2(lsu_arvalid),
       .rready2 (lsu_rready),
       .araddr2 (lsu_araddr),
@@ -361,12 +364,12 @@ module ysyx_20020207 #(
       .awaddr (awaddr),
       .wdata  (wdata),
       .wstrb  (wstrb)
-    `ifdef CONFIG_BURST
+    //`ifdef CONFIG_BURST
       ,
       .rlast  (io_master_rlast)
-    `endif
+    //`endif
   );
-`ifndef CONFIG_YSYXSOC
+/*`ifndef CONFIG_YSYXSOC
   wire sram_arvalid, sram_rready, sram_awvalid, sram_wvalid, sram_bready, sram_wready;
   wire sram_rvalid, sram_bvalid, sram_awready, sram_arready;
   wire [31:0] sram_araddr, sram_awaddr;
@@ -381,6 +384,7 @@ module ysyx_20020207 #(
   wire [3:0] uart_wstrb;
   wire [1:0] uart_rresp, uart_bresp;
 `endif
+*/
 
   wire clint_arvalid, clint_rready;
   wire clint_rvalid, clint_arready;
@@ -407,7 +411,7 @@ module ysyx_20020207 #(
       .wready   (wready),
       .bvalid   (bvalid),
       .bresp    (bresp),
-`ifndef CONFIG_YSYXSOC
+/*`ifndef CONFIG_YSYXSOC
       .arvalid1 (sram_arvalid),
       .rready1  (sram_rready),
       .araddr1  (sram_araddr),
@@ -425,7 +429,7 @@ module ysyx_20020207 #(
       .wready1  (sram_wready),
       .bvalid1  (sram_bvalid),
       .bresp1   (sram_bresp),
-`else
+`else*/
       .arvalid1 (io_master_arvalid),
       .rready1  (io_master_rready),
       .araddr1  (io_master_araddr),
@@ -443,7 +447,7 @@ module ysyx_20020207 #(
       .wready1  (io_master_wready),
       .bvalid1  (io_master_bvalid),
       .bresp1   (io_master_bresp),
-`endif
+//`endif
       .arvalid2 (clint_arvalid),
       .rready2  (clint_rready),
       .araddr2  (clint_araddr),
@@ -452,7 +456,8 @@ module ysyx_20020207 #(
       .rresp2   (clint_rresp),
       .rdata2   (clint_rdata),
       .high     (clint_high),
-`ifndef CONFIG_YSYXSOC
+/*
+    `ifndef CONFIG_YSYXSOC
       .arvalid3 (uart_arvalid),
       .rready3  (uart_rready),
       .araddr3  (uart_araddr),
@@ -471,10 +476,11 @@ module ysyx_20020207 #(
       .bvalid3  (uart_bvalid),
       .bresp3   (uart_bresp),
 `endif
+*/
       .diff_skip(diff_skip)
   );
 
-`ifndef CONFIG_YSYXSOC
+/*`ifndef CONFIG_YSYXSOC
   SRAM msram (
       .clk(clock),
       .rst(reset),
@@ -521,7 +527,7 @@ module ysyx_20020207 #(
       .rdata  (uart_rdata)
   );
 `endif
-
+*/
   ysyx_20020207_CLINT mclint (
       .clk(clock),
       .rst(reset),
@@ -549,8 +555,12 @@ module ysyx_20020207 #(
       .rdata(csr_rdata),
       .upc(csr_upc)
   );
-  
-  assign jump = exu_jump | branch;
+  reg alu_jump;
+  always@(posedge clock)begin
+    if(reset) alu_jump <= 0;
+    else alu_jump <= branch;
+  end
+  assign jump = exu_jump | alu_jump;
   assign csr_wdata = alu_result;
   assign result = result_ctrl == 2'b0 ? alu_result : (result_ctrl == 2'b01 ? mem_rdata : csr_rdata);
   assign reg_wdata = result;
