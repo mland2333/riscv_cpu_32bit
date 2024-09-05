@@ -46,7 +46,7 @@ void init_difftest(char *ref_so_file, long img_size, int port)
 
 extern CPU_status cpu;
 int check_regs(CPU_status* ref){
-  for(int i = 0; i<32; i++){
+  for(int i = 0; i<16; i++){
     if(ref->gpr[i] != cpu.gpr[i])
        return i; 
   }

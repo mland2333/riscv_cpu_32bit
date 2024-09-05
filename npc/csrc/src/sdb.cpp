@@ -1,5 +1,5 @@
 #include "sdb.h"
-
+#include <cstdlib>
 #ifdef CONFIG_YSYXSOC
 #include "VysyxSoCFull.h"
 #include "VysyxSoCFull___024root.h"
@@ -64,18 +64,19 @@ enum {
   IFETCH,
 };
 
-struct CachePerf{
+struct CachePerf {
   int miss = 0;
   int hit = 0;
-  void cache_miss(){
-    miss ++;
+  void cache_miss() { miss++; }
+  void cache_hit() { hit++; }
+  void cache_init() {
+    hit = 0;
+    miss = 0;
   }
-  void cache_hit(){
-    hit ++;
-  }
-
-  ~CachePerf(){
-    std::cout << std::format("cache_miss = {}\ncache_hit = {}\n", miss, hit);
+  ~CachePerf() {
+    std::cout << std::format(
+        "inst nums = {}\ncache miss = {}\ncache hit = {}\nmiss 占比：{}%\n\n",
+        miss + hit, miss, hit, (float)miss / (float)(miss + hit));
   }
 };
 
@@ -146,12 +147,12 @@ public:
         "平均每条指令为{}个周期\n",
         inst_nums, clk_nums, get_ipc(), ifu_nums, load_nums, exu_nums,
         idu_exu_nums, (float)idu_exu_nums / (float)inst_nums * 100,
-        (float)inst_clk[EXECUTE] / (float)idu_exu_nums,
-        idu_csr_nums, (float)idu_csr_nums / (float)inst_nums * 100,
-        (float)inst_clk[CSR] / (float)idu_csr_nums,
-        idu_store_nums, (float)idu_store_nums / (float)inst_nums * 100,
-        (float)inst_clk[STORE] / (float)idu_store_nums,
-        idu_load_nums, (float)idu_load_nums / (float)inst_nums * 100,
+        (float)inst_clk[EXECUTE] / (float)idu_exu_nums, idu_csr_nums,
+        (float)idu_csr_nums / (float)inst_nums * 100,
+        (float)inst_clk[CSR] / (float)idu_csr_nums, idu_store_nums,
+        (float)idu_store_nums / (float)inst_nums * 100,
+        (float)inst_clk[STORE] / (float)idu_store_nums, idu_load_nums,
+        (float)idu_load_nums / (float)inst_nums * 100,
         (float)inst_clk[LOAD] / (float)idu_load_nums,
         (float)inst_clk[LSU] / (float)(idu_load_nums + idu_store_nums),
         (float)inst_clk[IFETCH] / (float)inst_nums,
@@ -168,24 +169,21 @@ void lsu_get_data() { perf.lsu_get_data(); }
 void exu_finish_cal() { perf.exu_finish_cal(); }
 void idu_decode_inst(int inst) { perf.idu_decode_inst(inst); }
 
-void cache_miss() { cacheperf.cache_miss();}
-void cache_hit() { cacheperf.cache_hit();}
+void cache_miss() { cacheperf.cache_miss(); }
+void cache_hit() { cacheperf.cache_hit(); }
+void cache_init() { cacheperf.cache_init(); }
 }
 
 void cpu_update() {
-  for (int i = 0; i < 32; i++) {
+  for (int i = 0; i < 16; i++) {
     cpu.gpr[i] = (TOP_MEMBER(mreg__DOT__rf))[i];
   }
   cpu.pc = TOP_MEMBER(pc);
 }
 
 void sim_init() {
-  try{
-    top = new TOP_NAME;
-  } catch(const std::bad_alloc&e){
-    std::cerr << "Memory allocation failed: " << e.what() << std::endl;
-    assert(0);
-  }
+  top = new TOP_NAME;
+  assert(top != NULL);
 #ifdef CONFIG_GTKTRACE
   Verilated::traceEverOn(true);
   contextp = new VerilatedContext;
@@ -244,7 +242,7 @@ int exec_once() {
 #endif
 // top->inst = inst;
 #ifdef CONFIG_GTKTRACE
-  if (trace_enable != 1 && pc >= PC_BEGIN)
+  if (trace_enable != 1)
     trace_enable = 1;
 #endif
   if (pc >= PC_BEGIN && TOP_MEMBER(pc_wen))
@@ -259,7 +257,8 @@ int exec_once() {
       perf.inst_clk[IFETCH] += fetch_clk;
       lsu_begin = perf.clk_nums;
     }
-    if ((perf.inst_type == LOAD || perf.inst_type == STORE) && TOP_MEMBER(lsu_finish))
+    if ((perf.inst_type == LOAD || perf.inst_type == STORE) &&
+        TOP_MEMBER(lsu_finish))
       perf.inst_clk[LSU] += perf.clk_nums - lsu_begin;
 
     if (TOP_MEMBER(pc_wen)) {
@@ -372,12 +371,10 @@ int run() {
   extern bool npc_is_ref_skip;
   npc_is_ref_skip = true;
 #endif
-
 #ifdef CONFIG_DEVICE
   extern void sdl_clear_event_queue();
   sdl_clear_event_queue();
 #endif
-
   if (batch == 1) {
     int result = cmd_c(NULL);
     if (result == 1)

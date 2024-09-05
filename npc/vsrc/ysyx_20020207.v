@@ -83,13 +83,13 @@ module ysyx_20020207 #(
   //`ifdef CONFIG_YSYXSOC
   assign io_master_awid = 'b0,
       io_master_awlen = 'b0,
-      io_master_awsize = 3'b010,
+      io_master_awsize = func[0] ? 3'b001 : func[1] ? 3'b010 : 3'b000,
       io_master_awburst = 'b0,
       io_master_wlast = 'b1,
       io_master_arid = 'b0,
     //`ifdef CONFIG_BURST
       io_master_arlen = is_ifu ? ifu_arlen : 8'b0,
-      io_master_arsize = is_ifu ? ifu_arsize : 3'b010,
+      io_master_arsize = is_ifu ? ifu_arsize : func[1] ? 3'b010 : func[0] ? 3'b001 : 3'b0,
       io_master_arburst = is_ifu ? ifu_arburst : 2'b0;
     /*`else
       io_master_arlen = 8'b0,

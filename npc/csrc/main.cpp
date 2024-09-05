@@ -8,10 +8,6 @@
 #include "device.h"
 #include "ftrace.h"
 #include "verilated.h"
-#ifdef CONFIG_DIFFTEST
-
-#endif
-
 
 static char *img_file = NULL;
 static char *elf_file = NULL;
