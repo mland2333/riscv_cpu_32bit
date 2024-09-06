@@ -1,8 +1,9 @@
+/*
 `ifdef CONFIG_ICACHE
 import "DPI-C" function void cache_miss();
 import "DPI-C" function void cache_hit();
 import "DPI-C" function void cache_init();
-
+*/
 module ICACHE #(
   ICACHE_SIZE=4,
   ICACHE_NUMS=4
@@ -103,16 +104,16 @@ end
 
 always@(posedge clock)begin
   if(reset)begin
-    cache_init();
+    //cache_init();
     inst <= 0;
   end
   else begin
     if(inst_require && !need_read)begin
-      cache_hit();
+      //cache_hit();
       inst <= insts[offest];
     end
     else if(burst_nums == ICACHE_SIZE)begin
-      cache_miss();
+      //cache_miss();
       inst <= insts[offest];
     end
   end
@@ -240,4 +241,4 @@ end
 `endif*/
 endmodule
 
-`endif
+//`endif

@@ -78,7 +78,7 @@ module ysyx_20020207_LSU (
   always @(*) begin
     w_tran_nums = 0;
     wstrb1 = 0;
-    case (waddr[1:0])
+    case (io_master_awaddr[1:0])
       2'b00: begin
         wstrb  = wmask;
         _wdata = wdata;
@@ -115,7 +115,7 @@ module ysyx_20020207_LSU (
   reg r_tran_nums;
   always @(*) begin
     r_tran_nums = 0;
-    case (raddr[1:0])
+    case (io_master_araddr[1:0])
       2'b00: begin
         _rdata = _rdata0[31:0];
       end

@@ -1,5 +1,4 @@
-
-module Adder_32bit(
+/*module Adder_32bit(
     input [31:0]a, b,
     input cin,
     output [31:0]result,
@@ -8,7 +7,7 @@ module Adder_32bit(
     assign {cout, result} = a + b + {31'b0, cin};
     assign zero = ~(| result); 
     assign overflow = a[31] == b[31] && a[31] != result[31];
-endmodule
+endmodule*/
 
 module Shift_32bit(
     input signed[31:0] a,
