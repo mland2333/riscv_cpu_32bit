@@ -1,13 +1,15 @@
-/*module Adder_32bit(
+module Adder_32bit(
     input [31:0]a, b,
     input cin,
     output [31:0]result,
-    output cout, overflow, zero
+    output cout, overflow, zero, high
 );
-    assign {cout, result} = a + b + {31'b0, cin};
+    //assign {cout, result} = a + b + {31'b0, cin};
+    assign {cout, result} = 0;
     assign zero = ~(| result); 
     assign overflow = a[31] == b[31] && a[31] != result[31];
-endmodule*/
+    assign high = result[31];
+endmodule
 
 module Shift_32bit(
     input signed[31:0] a,
@@ -19,18 +21,12 @@ module Shift_32bit(
     localparam SRA = 2'b01;
     localparam SRL = 2'b10;
 
-    wire [31:0] sll_result, sra_result, srl_result;
-    assign sll_result = a << shift_num;
-    assign sra_result = a >>> shift_num;
-    assign srl_result = a >> shift_num;
-    always@(*)begin
-      case(shift_ctrl)
-        SLL: shift_result = sll_result;
-        SRA: shift_result = sra_result;
-        SRL: shift_result = srl_result;
-        default: shift_result = a;
-      endcase
-    end
+    wire [31:0] results[4];
+    assign results[SLL] = a; //<< shift_num;
+    assign results[SRA] = a; //>>> shift_num;
+    assign results[SRL] = a; //>> shift_num;
+    assign results[3] = a;
+    assign shift_result = results[shift_ctrl];
 endmodule
 
 module Logic_32bit(
@@ -38,21 +34,20 @@ module Logic_32bit(
     input[1:0] logic_ctrl,
     output [31:0] logic_result
 );
-    localparam AND = 2'b00;
-    localparam OR  = 2'b01;
-    localparam XOR = 2'b10;
-    wire [31:0] and_result, or_result, xor_result;
-    assign and_result = a & b;
-    assign or_result = a | b;
-    assign xor_result = a ^ b;
-    assign logic_result = (logic_ctrl == AND)? and_result :
-                          (logic_ctrl == OR )? or_result  :
-                          (logic_ctrl == XOR)? xor_result : a;
+    localparam XOR = 2'b00;
+    localparam OR  = 2'b10;
+    localparam AND = 2'b11;
+    wire [31:0] results[4];
+    assign results[AND] = a & b;
+    assign results[OR] = a | b;
+    assign results[XOR] = a ^ b;
+    assign results[1] = a;
+    assign logic_result = results[logic_ctrl];
 
 endmodule
 
 module ysyx_20020207_ALU(
-    input clock, ctrl_valid,
+    input clock, ctrl_valid, lr,
     input [31:0] alu_a, alu_b,
     input [3:0] alu_ctrl,
     input alu_sub, alu_sign,
@@ -63,7 +58,7 @@ module ysyx_20020207_ALU(
     localparam SHIFT = 2'b01;
     localparam LOGIC = 2'b10;
     localparam CMP   = 2'b11;
-
+/*
     localparam ADD = 4'b0000;
     localparam XOR = 4'b0001;
     localparam OR  = 4'b0010;
@@ -77,7 +72,41 @@ module ysyx_20020207_ALU(
     localparam BLT = 4'b1010;
     localparam BGE = 4'b1011;
     localparam SET = 4'b1100;
-    wire[31:0] adder_result, shift_result, logic_result, cmp_result;
+*/
+    localparam ADD = 4'b0000;
+    localparam SLL = 4'b0001;
+    localparam SLTI = 4'b0010;
+    localparam SLTIU = 4'b0011;
+    localparam XOR = 4'b0100;
+    localparam SRI  = 4'b0101;
+    localparam OR  = 4'b0110;
+    localparam AND = 4'b0111;
+
+    localparam BEQ = 4'b1000;
+    localparam BNE = 4'b1001;
+    localparam BLT = 4'b1100;
+    localparam BGE = 4'b1101;
+    localparam BLTU = 4'b1110;
+    localparam BGEU = 4'b1111;
+
+    reg is_arch;
+    wire is_add = ctrl == ADD;
+    wire is_sll = ctrl == SLL;
+    wire is_slti = ctrl == SLTI;
+    wire is_sltiu = ctrl == SLTIU;
+    wire is_xor = ctrl == XOR;
+    wire is_sra = ctrl == SRI && is_arch;
+    wire is_srl = ctrl == SRI && !is_arch;
+    wire is_or = ctrl == OR;
+    wire is_and = ctrl == AND;
+    wire is_beq = ctrl == BEQ;
+    wire is_bne = ctrl == BNE;
+    wire is_blt = ctrl == BLT || ctrl == BLTU;
+    wire is_bge = ctrl == BGE || ctrl == BGEU;
+
+
+
+    wire[31:0] results[4];
     reg[31:0] a, b;
     wire[31:0] l, r;
     reg sub, sign;
@@ -92,87 +121,29 @@ module ysyx_20020207_ALU(
         sub <= alu_sub;
         sign <= alu_sign;
         b <= alu_b;
+        is_arch <= lr;
       end
       else if(alu_valid)
         alu_valid <= 0;
     end
     assign r = a;
     assign l = sub ? ~b : b;
-    always@(*)begin
-        branch = 0;
-        op_ctrl = 2'b00;
-        logic_ctrl = 0;
-        shift_ctrl = 0;
-        case(ctrl)
-            ADD:
-            begin
-                op_ctrl = ADDER;
-            end
-            XOR:
-            begin
-              op_ctrl = LOGIC;
-              logic_ctrl = 2'b10;
-            end
-            OR:
-            begin
-              op_ctrl = LOGIC;
-              logic_ctrl = 2'b01;
-            end
-            AND:
-            begin
-              op_ctrl = LOGIC;
-              logic_ctrl = 2'b00;
-            end
-            SLL:begin
-              op_ctrl = SHIFT;
-            end
-            SRL:begin
-              op_ctrl = SHIFT;
-              shift_ctrl = 2'b10;
-            end
-            SRA:begin
-              op_ctrl = SHIFT;
-              shift_ctrl = 2'b01;
-            end
-            BEQ:begin
-              op_ctrl = CMP;
-              branch = ZF;
-            end
-            BNE:begin
-              op_ctrl = CMP;
-              branch = ~ZF;
-            end
-            BLT:begin
-              op_ctrl = CMP;
-              branch = cmp;
-            end
-            BGE:begin
-              op_ctrl = CMP;
-              branch = ~cmp;
-            end
-            SET:begin
-              op_ctrl = CMP;
-            end
-            default:
-            begin
-                op_ctrl = 2'b00;
-            end
-        endcase
-    end
-    Adder_32bit Adder(.a(l), .b(r), .cin(sub), .result(adder_result), .cout(CF), .zero(ZF), .overflow(OF));
-    Shift_32bit Shift(.a(a), .shift_num(b[4:0]), .shift_ctrl(shift_ctrl), .shift_result(shift_result));
-    Logic_32bit Logic(.a(a), .b(b), .logic_ctrl(logic_ctrl), .logic_result(logic_result));
-    
-    wire cmp;
-    assign cmp = sign ? OF ^ adder_result[31] : ~CF;
-    assign cmp_result = {31'b0, cmp};
 
-    always@(*)begin
-        case(op_ctrl)
-            ADDER: result = adder_result;
-            SHIFT: result = shift_result;
-            LOGIC: result = logic_result;
-            CMP  : result = cmp_result;
-        endcase
-    end
-endmodule
+    assign branch = is_beq && ZF || is_bne && ~ZF || is_blt && cmp || is_bge && ~cmp;
+    assign op_ctrl = is_xor || is_or || is_and ? LOGIC : 
+                     is_sll || is_srl || is_sra ? SHIFT :
+                     is_beq || is_bne || is_blt || is_bge || is_slti || is_sltiu ? CMP : ADDER;
+    assign logic_ctrl = ctrl[1:0];
+    assign shift_ctrl = is_srl ? 2'b10 : is_sra ? 2'b01 : 2'b00;
+
+    Adder_32bit Adder(.a(l), .b(r), .cin(sub), .result(results[ADDER]), .cout(CF), .zero(ZF), .overflow(OF), .high(high));
+    Shift_32bit Shift(.a(a), .shift_num(b[4:0]), .shift_ctrl(shift_ctrl), .shift_result(results[SHIFT]));
+    Logic_32bit Logic(.a(a), .b(b), .logic_ctrl(logic_ctrl), .logic_result(results[LOGIC]));
+    
+    wire cmp, high;
+    assign cmp = sign ? OF ^ high : ~CF;
+    assign results[CMP] = {31'b0, cmp};
+    
+    assign result = results[op_ctrl];
+
+    endmodule

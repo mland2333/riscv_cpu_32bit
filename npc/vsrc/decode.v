@@ -24,12 +24,44 @@ always@(posedge clock)begin
 end
 
 
-    reg[31:0] i;
     assign op = _inst[6:0];
     assign func = _inst[14:12];
     assign rd = _inst[11:7];
     assign rs1 = _inst[19:15];
     assign rs2 = _inst[24:20];
+
+    wire [31:0]luii = {_inst[31:12], 12'b0};
+    wire [31:0]auipci = {_inst[31:12], 12'b0};
+    wire [31:0]ii = {{20{_inst[31]}}, _inst[31:20]};
+    wire [31:0]ji = {{11{_inst[31]}}, _inst[31], _inst[19:12], _inst[20], _inst[30:21], 1'b0};
+    wire [31:0]si = {{20{_inst[31]}}, _inst[31:25], _inst[11:7]};
+    wire [31:0]bi = {{19{_inst[31]}}, _inst[31], _inst[7], _inst[30:25], _inst[11:8], 1'b0};
+    wire [31:0]ri = {25'b0, _inst[31:25]};
+
+    wire is_i = _inst[6:0] == 7'b0000011 || _inst[6:0] == 7'b0010011
+            ||  _inst[6:0] == 7'b1100111 || _inst[6:0] == 7'b1110011;
+    wire is_j = _inst[6:0] == 7'b1101111;
+    wire is_s = _inst[6:0] == 7'b0100011;
+    wire is_b = _inst[6:0] == 7'b1100011;
+    wire is_r = _inst[6:0] == 7'b0110011;
+    wire is_lui = _inst[6:0] == 7'b0110111;
+    wire is_auipc = _inst[6:0] == 7'b0010111;
+
+    wire[31:0] iri = is_i ? ii : ri;
+    wire[31:0] jbi = is_j ? ji : bi;
+    wire[31:0] sauipci = is_s ? si : auipci;
+    wire[31:0] lui0i = is_lui ? luii : 0;
+
+    wire is_iri = is_i | is_r;
+    wire is_sauipci = is_s | is_auipc;
+
+    wire[31:0] irjbi = is_iri ? iri : jbi;
+    wire[31:0] sauipcluii = is_sauipci ? sauipci : lui0i;
+
+    wire is_up = is_i | is_r | is_j | is_b;
+    assign imm = is_up ? irjbi : sauipcluii;
+
+    /*
     always@(*)begin
         case(_inst[6:0])
             7'b0110111: //lui
@@ -71,5 +103,5 @@ end
     end
 
     assign imm = i;
-
+*/
 endmodule

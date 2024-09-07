@@ -221,7 +221,7 @@ module ysyx_20020207 #(
   wire [31:0] alu_result;
   wire [2:0] load_ctrl;
   wire ctrl_valid;
-  wire fencei;
+  wire fencei, lr;
   ysyx_20020207_EXU #(DATA_WIDTH) mexu (
       .clock(clock),
       .reset(reset),
@@ -250,6 +250,7 @@ module ysyx_20020207 #(
       .wmask(wmask),
       .load_ctrl(load_ctrl),
       .fencei(fencei),
+      .lr(lr),
       .ctrl_valid(ctrl_valid)
   );
   wire alu_valid;
@@ -257,6 +258,7 @@ module ysyx_20020207 #(
   ysyx_20020207_ALU malu (
       .clock(clock),
       .ctrl_valid(ctrl_valid),
+      .lr(lr),
       .alu_a(alu_a),
       .alu_b(alu_b),
       .alu_ctrl(alu_ctrl),
@@ -283,6 +285,7 @@ module ysyx_20020207 #(
   ysyx_20020207_LSU mlsu (
       .clk(clock),
       .rst(reset),
+      .ctrl_valid(ctrl_valid),
       .alu_valid(alu_valid),
       .raddr(mem_raddr),
       .waddr(mem_waddr),
@@ -545,8 +548,10 @@ module ysyx_20020207 #(
   assign csr_addr = imm[11:0];
 
   ysyx_20020207_CSRU mcsr (
-      .clk(clock),
+      .clock(clock),
       .wen(csr_wen),
+      .decode_valid(decode_valid),
+      .ctrl_valid(ctrl_valid),
       .csr_ctrl(csr_ctrl),
       .csr_addr(csr_addr),
       .wdata(csr_wdata),

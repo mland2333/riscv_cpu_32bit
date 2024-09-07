@@ -23,7 +23,7 @@ module ysyx_20020207_XBAR(
   input [31:0] rdata2,
   output reg arvalid2, rready2, 
   output reg [31:0] araddr2, 
-  output reg high,
+  output high,
 /*`ifndef CONFIG_YSYXSOC
   //uart
   input arready3, rvalid3, awready3, wready3, bvalid3,
@@ -76,66 +76,26 @@ localparam GPIO_ZONE = 3'b111;
 
 reg[2:0] read_zone;
 reg[2:0] write_zone;
-reg read_diff_skip, write_diff_skip;
-always@(*)begin
-  read_zone = OTHER_ZONE;
-  read_diff_skip = 0;
-  high = 0;
-  if(araddr >= `UART && araddr < `UART + 32'h1000)begin
-    read_zone = UART_ZONE;
-    read_diff_skip = 1;
-  end
-  else if(araddr == `RTC_ADDR)begin
-    read_zone = RTC_ZONE;
-    read_diff_skip = 1;
-  end
-  else if(araddr == `RTC_ADDR_HIGH)begin
-    read_zone = RTC_ZONE;
-    high = 1;
-    read_diff_skip = 1;
-  end
-  else if(araddr >= `FLASH_BASE && araddr < `FLASH_BASE + `FLASH_SIZE)
-    read_zone = FLASH_ZONE;
-  else if(araddr >= `SRAM_BASE && araddr < `SRAM_BASE + `SRAM_SIZE)
-    read_zone = SRAM_ZONE;
-  else if(araddr >= `PSRAM_BASE && araddr < `PSRAM_BASE + `PSRAM_SIZE)
-    read_zone = PSRAM_ZONE;
-  else if(araddr >= `SDRAM_BASE && araddr < `SDRAM_BASE + `SDRAM_SIZE)
-    read_zone = SDRAM_ZONE;
-  else if(araddr >= `GPIO_BASE && araddr < `GPIO_BASE + `GPIO_SIZE)begin
-    read_diff_skip = 1;
-    read_zone = GPIO_ZONE;
-  end
-  else 
-    read_zone = OTHER_ZONE;
-end
 
+wire is_read_uart = araddr[31:12] == 20'h10000;
+wire is_read_rtc = araddr[31:16] == 16'h0200;
+assign high = araddr == `RTC_ADDR_HIGH;
+wire is_read_flash = araddr[31:28] == 4'h3;
+wire is_read_sram = araddr[31:24] == 8'h0f;
+wire is_read_psram = araddr[31:28] == 4'h8 || araddr[31:28] == 4'h9;
+wire is_read_sdram = araddr[31:28] == 4'ha || araddr[31:28] == 4'hb;
+wire is_read_gpio = araddr[31:4] == 28'h1000200;
+wire read_diff_skip = is_read_uart || is_read_rtc || is_read_gpio;
 
-always@(*)begin
-  write_zone = OTHER_ZONE;
-  write_diff_skip = 0;
-  if(awaddr >= `UART && awaddr < `UART + 32'h0fff)begin
-    write_diff_skip = 1;
-    write_zone = UART_ZONE;
-  end
-  //else if(awaddr >= `FLASH_BASE && awaddr < `FLASH_BASE + `FLASH_SIZE)
-  //  write_zone = FLASH_ZONE;
-  else if(awaddr >= `SRAM_BASE && awaddr < `SRAM_BASE + `SRAM_SIZE)
-    write_zone = SRAM_ZONE;
-  else if(awaddr >= `PSRAM_BASE && awaddr < `PSRAM_BASE + `PSRAM_SIZE)
-    write_zone = PSRAM_ZONE;
-  else if(awaddr >= `SDRAM_BASE && awaddr < `SDRAM_BASE + `SDRAM_SIZE)
-    write_zone = SDRAM_ZONE;
-  else if(awaddr >= `GPIO_BASE && awaddr < `GPIO_BASE + `GPIO_SIZE)begin
-    write_diff_skip = 1;
-    write_zone = GPIO_ZONE;
-  end
-  else 
-    write_zone = OTHER_ZONE;
-end
+wire is_write_uart = awaddr[31:12] == 20'h10000;
+wire is_write_sram = awaddr[31:24] == 8'h0f;
+wire is_write_psram = awaddr[31:28] == 4'h8 || awaddr[31:28] == 4'h9;
+wire is_write_sdram = awaddr[31:28] == 4'ha || awaddr[31:28] == 4'hb;
+wire is_write_gpio = awaddr[31:4] == 28'h1000200;
+wire write_diff_skip = is_write_uart || is_write_gpio;
 
 assign diff_skip = read_diff_skip | write_diff_skip;
-
+assign rvalid = is_read_rtc ? rvalid2 : rvalid1;
 always@(*)begin
   arvalid1 = 0;
   rready1 = 0;
@@ -151,20 +111,18 @@ always@(*)begin
 `endif
 */
   arready = 0;
-  rvalid = 0;
   rresp = 0;
   rdata = 0;
-  if(read_zone == RTC_ZONE)begin
+  if(is_read_rtc)begin
     arvalid2 = arvalid;
     rready2 = rready;
     araddr2 = araddr;
     arready = arready2;
-    rvalid = rvalid2;
     rresp = rresp2;
     rdata = rdata2;
   end
 /*`ifndef CONFIG_YSYXSOC
-  else if(read_zone == UART_ZONE)begin
+  else if(is_read_uart)begin
     arvalid3 = arvalid;
     rready3 = rready;
     araddr3 = araddr;
@@ -179,7 +137,6 @@ always@(*)begin
     rready1 = rready;
     araddr1 = araddr;
     arready = arready1;
-    rvalid = rvalid1;
     rresp = rresp1;
     rdata = rdata1;
   end

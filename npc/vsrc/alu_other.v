@@ -1,5 +1,5 @@
 
-module pg_generate(
+/*module pg_generate(
     input[3:0] a, b,
     output[3:0] p, g
 );
@@ -82,4 +82,4 @@ module Adder_32bit(
     assign zero = ~(| result);
     assign overflow = a[31] == b[31] && a[31] != result[31];
 endmodule
-
+*/

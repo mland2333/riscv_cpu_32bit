@@ -144,8 +144,15 @@ always@(posedge clock)begin
   if(reset) burst_nums <= 0;
   else begin
     if(burst_nums == ICACHE_SIZE) burst_nums <= 0;
-    else if(rvalid) burst_nums <= burst_nums + 1;
+    else if(_rvalid) burst_nums <= burst_nums + 1;
   end
+end
+
+reg _rvalid;
+reg[31:0] _rdata;
+always@(posedge clock)begin
+    _rvalid <= rvalid;
+    if(rvalid) _rdata <= rdata;
 end
 
 always@(posedge clock)begin
@@ -155,7 +162,7 @@ always@(posedge clock)begin
     end
   end
   else begin
-    if(rvalid) icache[index][32*burst_nums +: 32] <= rdata;
+    if(_rvalid) icache[index][32*burst_nums +: 32] <= _rdata;
     if(rlast) begin
       icache[index][VALID] <= 1;
       icache[index][`ICACHE_TAG] <= tag;

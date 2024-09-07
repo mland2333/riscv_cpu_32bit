@@ -2,6 +2,7 @@
 module ysyx_20020207_LSU (
     input clk,
     rst,
+    ctrl_valid,
     alu_valid,
     input [31:0] raddr,
     waddr,
@@ -111,39 +112,45 @@ module ysyx_20020207_LSU (
   end
 
   reg [31:0] _rdata;
-  reg [31:0] _rdata0, _rdata1;
+  reg [31:0] rdata0, rdata1;
   reg r_tran_nums;
+  reg[2:0] _load_ctrl;
+  always@(posedge clk)begin
+    if(rst) _load_ctrl <= 0;
+    else if(ctrl_valid) _load_ctrl <= load_ctrl;
+  end
+
   always @(*) begin
     r_tran_nums = 0;
     case (io_master_araddr[1:0])
       2'b00: begin
-        _rdata = _rdata0[31:0];
+        _rdata = rdata0[31:0];
       end
       2'b01: begin
-        if (load_ctrl[1]) begin
+        if (_load_ctrl[1]) begin
           r_tran_nums = 1;
-          _rdata = {_rdata0[7:0], _rdata1[31:8]};
+          _rdata = {rdata0[7:0], rdata1[31:8]};
         end else begin
           r_tran_nums = 0;
-          _rdata = {8'b0, _rdata0[31:8]};
+          _rdata = {8'b0, rdata0[31:8]};
         end
       end
       2'b10: begin
-        if (load_ctrl[1]) begin
+        if (_load_ctrl[1]) begin
           r_tran_nums = 1;
-          _rdata = {_rdata0[15:0], _rdata1[31:16]};
+          _rdata = {rdata0[15:0], rdata1[31:16]};
         end else begin
           r_tran_nums = 0;
-          _rdata = {16'b0, _rdata0[31:16]};
+          _rdata = {16'b0, rdata0[31:16]};
         end
       end
       2'b11: begin
-        if (load_ctrl[1] || load_ctrl[0]) begin
+        if (_load_ctrl[1] || _load_ctrl[0]) begin
           r_tran_nums = 1;
-          _rdata = {_rdata0[23:0], _rdata1[31:24]};
+          _rdata = {rdata0[23:0], rdata1[31:24]};
         end else begin
           r_tran_nums = 0;
-          _rdata = {24'b0, _rdata0[31:24]};
+          _rdata = {24'b0, rdata0[31:24]};
         end
       end
     endcase
@@ -160,6 +167,7 @@ module ysyx_20020207_LSU (
     end else begin
       case (read_state)
         IDLE: begin
+          io_master_araddr <= 0;
           if (ren && alu_valid) begin
             arvalid <= 1;
             io_master_araddr <= raddr;
@@ -172,7 +180,7 @@ module ysyx_20020207_LSU (
           if (io_master_rvalid) begin
             arvalid <= 0;
             read_state <= IDLE;
-            _rdata0 <= io_master_rdata;
+            rdata0 <= io_master_rdata;
             //lsu_get_data();
           end
         end
@@ -181,7 +189,7 @@ module ysyx_20020207_LSU (
           if (io_master_rvalid) begin
             arvalid <= 0;
             read_state <= MID;
-            _rdata1 <= io_master_rdata;
+            rdata1 <= io_master_rdata;
           end
         end
         MID: begin
@@ -202,6 +210,7 @@ module ysyx_20020207_LSU (
     end else begin
       case (write_state)
         IDLE: begin
+          io_master_awaddr <= 0;
           if (wen && alu_valid) begin
             awvalid <= wen;
             wvalid <= wen;
@@ -247,7 +256,7 @@ module ysyx_20020207_LSU (
   end
 
   always @(*) begin
-    case (load_ctrl)
+    case (_load_ctrl)
       3'b000:  rdata = {{24{_rdata[7]}}, _rdata[7:0]};
       3'b001:  rdata = {{16{_rdata[15]}}, _rdata[15:0]};
       3'b010:  rdata = _rdata;

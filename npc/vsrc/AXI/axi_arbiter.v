@@ -54,11 +54,14 @@ always@(posedge clk)begin
   else begin
     case(read_state)
       IDLE_READ:begin
+        araddr = 0;
         if(arvalid1)begin
           read_state <= MEM1_READ;
+          araddr = araddr1;
         end
         else if(arvalid2)begin
           read_state <= MEM2_READ;
+          araddr = araddr2;
         end
       end
     //`ifdef CONFIG_BURST
@@ -96,31 +99,34 @@ always@(*)begin
     MEM1_READ:begin
       arvalid = arvalid1;
       rready = rready1;
-      araddr = araddr1;
+      
     end
     MEM2_READ:begin
       arvalid = arvalid2;
       rready = rready2;
-      araddr = araddr2;
+      
     end
     default:begin
       arvalid = 0;
       rready = 0;
-      araddr = 0;
+
     end
   endcase
 end
 
-assign arready1 = read_state == MEM1_READ ? arready : 0;
-assign rvalid1 = read_state == MEM1_READ ? rvalid : 0;
-assign rresp1 = read_state == MEM1_READ ? rresp : 0;
-assign rdata1 = read_state == MEM1_READ ? rdata : 0;
-assign rlast1 = read_state == MEM1_READ ? rlast : 0;
+wire is_read1 = read_state == MEM1_READ;
+wire is_read2 = read_state == MEM2_READ;
 
-assign arready2 = read_state == MEM2_READ ? arready : 0;
-assign rvalid2 = read_state == MEM2_READ ? rvalid : 0;
-assign rresp2 = read_state == MEM2_READ ? rresp : 0;
-assign rdata2 = read_state == MEM2_READ ? rdata : 0;
+assign arready1 = is_read1? arready : 0;
+assign rvalid1 = is_read1? rvalid : 0;
+assign rresp1 = is_read1? rresp : 0;
+assign rdata1 = is_read1? rdata : 0;
+assign rlast1 = is_read1? rlast : 0;
+
+assign arready2 = is_read2? arready : 0;
+assign rvalid2 = is_read2? rvalid : 0;
+assign rresp2 = is_read2? rresp : 0;
+assign rdata2 = is_read2? rdata : 0;
 
 
 

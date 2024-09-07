@@ -14,7 +14,7 @@ module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     output reg upc_ctrl, sub, sign,
     output reg[3:0] wmask,
     output reg[2:0] load_ctrl,
-    output fencei,
+    output fencei, lr,
     output reg ctrl_valid
 );
 reg[6:0] _op;
@@ -45,21 +45,65 @@ end
 `define EBREAK 3'b011
 `define CSRW 3'b100
     localparam ADD = 4'b0000;
-    localparam XOR = 4'b0001;
-    localparam OR  = 4'b0010;
-    localparam AND = 4'b0011;
-    localparam SLL = 4'b0100;
-    localparam SRL = 4'b0101;
-    localparam SRA = 4'b0110;
+    localparam SLL = 4'b0001;
+    localparam SLTI = 4'b0010;
+    localparam SLTIU = 4'b0011;
+    localparam XOR = 4'b0100;
+    localparam SRI  = 4'b0101;
+    localparam OR  = 4'b0110;
+    localparam AND = 4'b0111;
+
     localparam BEQ = 4'b1000;
     localparam BNE = 4'b1001;
-    localparam BLT = 4'b1010;
-    localparam BGE = 4'b1011;
-    localparam SET = 4'b1100;
+    localparam BLT = 4'b1100;
+    localparam BGE = 4'b1101;
+    localparam BLTU = 4'b1110;
+    localparam BGEU = 4'b1111;
     //reg [3:0] alu_ctrl;
     //reg sub, sign;
     //reg[31:0] read_result, rdata;
     //reg[7:0] wmask;
+    wire I = _op == 7'b0010011;
+    wire R = _op == 7'b0110011;
+    wire L = _op == 7'b0000011;
+    wire S = _op == 7'b0100011;
+    wire JAL = _op == 7'b1101111;
+    wire JALR = _op == 7'b1100111;
+    wire AUIPC = _op == 7'b0010111;
+    wire LUI = _op == 7'b0110111;
+    wire B = _op == 7'b1100011;
+    wire CSR = _op == 7'b1110011;
+    wire FENCEI = _op == 7'b0001111;
+    wire f000 = _func == 3'b000;
+    wire f001 = _func == 3'b001;
+    wire f010 = _func == 3'b010;
+    wire f011 = _func == 3'b011;
+    wire f100 = _func == 3'b100;
+    wire f101 = _func == 3'b101;
+    wire f110 = _func == 3'b110;
+    wire f111 = _func == 3'b111;
+
+    assign sub = (I || R) && (f011 || f010) || B ? 1 : R && f000 ? _imm[5] : 0;
+    assign sign = R && f010 || B && (f100 || f101) ? 1 : 0;
+    assign reg_wen = !(S || B || FENCEI);
+    assign alu_a = JAL || JALR || AUIPC ? _pc : LUI ? 0 : _src1;
+    assign alu_b = I || L || AUIPC || S  || LUI ? _imm : JAL || JALR ? 32'b100 :
+            CSR && f001 ? 32'b0 : CSR && f010 ? _csr_rdata : _src2;
+    assign result_ctrl = L ? 2'b01 : CSR ? 2'b10 : 0;
+    assign csr_wen = CSR;
+    assign mem_wen = S;
+    assign mem_ren = L;
+    assign jump = JAL || JALR || CSR && f000;
+    assign upc_ctrl = CSR && f000;
+    assign load_ctrl = L ? _func : 0;
+    assign fencei = FENCEI;
+    assign csr_ctrl = CSR ? (f000 ? (_imm[1] ? `MRET : !_imm[0] ? `ECALL : `EBREAK) :
+      f001 || f010 ? `CSRW : 0) : 0;
+    assign alu_ctrl = I||R ? {1'b0, _func} : B ? {1'b1, func} : CSR && f010 ? OR : ADD;
+    assign wmask = S ? (f000 ? 4'b0001 : f001 ? 4'b0011 : 4'b1111) : 0;
+    assign lr = R && _imm[5] == 1 || I && _imm[10] == 1;
+    assign upc = JAL || B ? _pc + _imm : JALR ? (_src1 + _imm)&~1 : 0;
+    /*
     always@(*)begin
         sub = 0;
         sign = 0;
@@ -252,6 +296,7 @@ end
             end
         endcase
     end
+    */
     /*
     Alu_32bit myalu(.a(alu_a), .b(alu_b), .alu_ctrl(alu_ctrl), .sub(sub), .sign(sign), .result(alu_result), .ZF(ZF), .OF(OF), .CF(CF));
     Memory mem(.raddr(alu_result), .waddr(alu_result), .wdata(_src2), .valid(valid), .wen(mem_wen), .wmask(wmask), .rdata(rdata));

@@ -1,4 +1,5 @@
-/*`ifndef CONFIG_YSYXSOC
+/*
+`ifndef CONFIG_YSYXSOC
 module UART(
   input clk, rst,
   input reg arvalid, rready, awvalid, wvalid, bready,
@@ -67,4 +68,5 @@ always@(posedge clk)begin
 end
 
 endmodule
-`endif*/
+`endif
+*/
