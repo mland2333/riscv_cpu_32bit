@@ -255,6 +255,7 @@ module ysyx_20020207 #(
   );
   wire alu_valid;
   wire ZF, OF, CF, branch;
+  wire[31:0] lsu_addr;
   ysyx_20020207_ALU malu (
       .clock(clock),
       .ctrl_valid(ctrl_valid),
@@ -265,10 +266,12 @@ module ysyx_20020207 #(
       .alu_sub(alu_sub),
       .alu_sign(alu_sign),
       .result(alu_result),
+      .lsu_addr(lsu_addr),
       .ZF(ZF),
       .OF(OF),
       .CF(CF),
       .branch(branch),
+      .addr_valid(addr_valid),
       .alu_valid(alu_valid)
   );
   reg [31:0] mem_rdata, mem_wdata;
@@ -279,14 +282,14 @@ module ysyx_20020207 #(
   wire [31:0] lsu_wdata, lsu_rdata;
   wire [3:0] lsu_wstrb;
   wire [1:0] lsu_rresp, lsu_bresp, rresp, bresp;
-  assign mem_raddr = alu_result;
-  assign mem_waddr = alu_result;
+  assign mem_raddr = lsu_addr;
+  assign mem_waddr = lsu_addr;
   assign mem_wdata = src2;
   ysyx_20020207_LSU mlsu (
       .clk(clock),
       .rst(reset),
       .ctrl_valid(ctrl_valid),
-      .alu_valid(alu_valid),
+      .alu_valid(addr_valid),
       .raddr(mem_raddr),
       .waddr(mem_waddr),
       .wdata(mem_wdata),
