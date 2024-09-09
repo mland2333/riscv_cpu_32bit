@@ -23,9 +23,9 @@ module Shift_32bit(
     localparam SRL = 2'b10;
 
     wire [31:0] results[4];
-    assign results[SLL] = a ;//<< shift_num;
-    assign results[SRA] = a ;//>>> shift_num;
-    assign results[SRL] = a ;//>> shift_num;
+    assign results[SLL] = a << shift_num;
+    assign results[SRA] = a >>> shift_num;
+    assign results[SRL] = a >> shift_num;
     assign results[3] = a;
     assign shift_result = results[shift_ctrl];
 endmodule

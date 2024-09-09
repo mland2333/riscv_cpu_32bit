@@ -45,8 +45,8 @@ localparam VALID = ICACHE_LINE - 1;
 `define ICACHE_TAG VALID - 1 : 32*ICACHE_SIZE
 
 assign rready = 1;
-wire[TAG_SIZE-1 : 0] tag = pc[`TAG];
-wire[INDEX_SIZE - 1 : 0] index = pc[`INDEX];
+wire[TAG_SIZE-1 : 0] tag = _pc[`TAG];
+wire[INDEX_SIZE - 1 : 0] index = _pc[`INDEX];
 
 reg[ICACHE_LINE - 1:0] icache[ICACHE_NUMS];
 reg refresh;
@@ -70,11 +70,16 @@ always@ * begin
 end
 
 wire[OFFEST_SIZE + 1 : 0] zero = 0;
-assign araddr = {pc[31: OFFEST_SIZE + 2], zero};
+assign araddr = {_pc[31: OFFEST_SIZE + 2], zero};
 
 reg[2:0] state;
-wire[OFFEST_SIZE-1 : 0] offest = pc[`OFFEST];
+wire[OFFEST_SIZE-1 : 0] offest = _pc[`OFFEST];
 wire need_read = ~(icache[index][VALID] && icache[index][`ICACHE_TAG] == tag);
+
+reg[31:0] _pc;
+always@(posedge clock)begin
+  if(inst_require) _pc <= pc;
+end
 
 reg[7:0] burst_nums;
 reg trans_ready;

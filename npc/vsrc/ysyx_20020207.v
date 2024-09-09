@@ -564,17 +564,26 @@ module ysyx_20020207 #(
       .upc(csr_upc)
   );
   reg alu_jump;
+  reg _exu_jump;
   always@(posedge clock)begin
     if(reset) alu_jump <= 0;
     else alu_jump <= branch;
   end
-  assign jump = exu_jump | alu_jump;
+  always@(posedge clock)begin
+    if(reset) _exu_jump <= 0;
+    else _exu_jump <= 1;
+  end
+
+  assign jump = _exu_jump | alu_jump;
   assign csr_wdata = alu_result;
   assign result = result_ctrl == 2'b0 ? alu_result : (result_ctrl == 2'b01 ? mem_rdata : csr_rdata);
   assign reg_wdata = result;
-
+  reg[31:0] _exu_upc;
+  always@(posedge clock)begin
+    if(ctrl_valid) _exu_upc <= exu_upc;
+  end
   always @(*) begin
-    if (upc_ctrl == 0) upc = exu_upc;
+    if (upc_ctrl == 0) upc = _exu_upc;
     else upc = csr_upc;
   end
 endmodule
