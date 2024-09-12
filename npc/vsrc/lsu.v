@@ -13,6 +13,11 @@ module ysyx_20020207_LSU (
     input [2:0] load_ctrl,
     output reg [31:0] rdata,
     output lsu_finish,
+    
+  `ifdef CONFIG_PIPELINE
+    input in_valid, out_ready,
+    output out_valid, in_ready,
+  `endif
 
     input io_master_awready,
     output io_master_awvalid,
@@ -79,7 +84,7 @@ module ysyx_20020207_LSU (
   always @(*) begin
     w_tran_nums = 0;
     wstrb1 = 0;
-    case (io_master_awaddr[1:0])
+    case (waddr[1:0])
       2'b00: begin
         wstrb  = wmask;
         _wdata = wdata;
@@ -122,7 +127,7 @@ module ysyx_20020207_LSU (
 
   always @(*) begin
     r_tran_nums = 0;
-    case (io_master_araddr[1:0])
+    case (raddr[1:0])
       2'b00: begin
         _rdata = rdata0[31:0];
       end

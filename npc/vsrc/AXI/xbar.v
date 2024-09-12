@@ -78,7 +78,7 @@ reg[2:0] read_zone;
 reg[2:0] write_zone;
 
 wire is_read_uart = araddr[31:12] == 20'h10000;
-wire is_read_rtc = araddr[31:16] == 16'h0200;
+wire is_read_rtc = araddr[31:16] == 16'h2000;
 assign high = araddr == `RTC_ADDR_HIGH;
 wire is_read_flash = araddr[31:28] == 4'h3;
 wire is_read_sram = araddr[31:24] == 8'h0f;

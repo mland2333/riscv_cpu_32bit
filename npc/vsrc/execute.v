@@ -2,9 +2,13 @@ module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     input clock,
     input reset,
     input decode_valid,
-    input [6:0] op,
-    input [2:0] func,
-    input [DATA_WIDTH-1:0]src1, src2, imm, pc, csr_rdata,
+    input [6:0] op_in,
+    input [2:0] func_in,
+    input [DATA_WIDTH-1:0]src1_in, src2_in, imm_in, pc_in, csr_rdata_in,
+  `ifdef CONFIG_PIPELINE
+    input in_valid, out_ready,
+    output out_valid, in_ready,
+  `endif
     output reg[DATA_WIDTH-1:0]upc, alu_a, alu_b,
     output reg reg_wen,
     output wire jump, mem_wen, mem_ren, csr_wen,
@@ -17,29 +21,72 @@ module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     output fencei, lr,
     output reg ctrl_valid
 );
-reg[6:0] _op;
-reg[2:0] _func;
-reg[31:0] _imm, _pc, _src1, _src2, _csr_rdata;
+
+reg[6:0] op;
+reg[2:0] func;
+reg[31:0] imm, pc, src1, src2, csr_rdata;
+
+`ifdef CONFIG_PIPELINE
+reg[31:0] pc;
+always@(posedge clock)begin
+  if(reset) in_ready <= 1;
+  else if(in_valid && in_ready) in_ready <= 0;
+  else if(!in_ready && out_valid && out_ready) in_ready <= 1;
+end
+
+always@(posedge clock)begin
+  if(reset) out_valid <= 0;
+  else if(!in_ready && inst_valid) out_valid <= 1;
+  else if(out_valid && out_ready) out_valid <= 0;
+end
+
+always@(posedge clock)begin
+  if(in_valid && in_ready) op <= op_in;
+end
+always@(posedge clock)begin
+  if(in_valid && in_ready) func <= func_in;
+end
+always@(posedge clock)begin
+  if(in_valid && in_ready) imm <= imm_in;
+end
+always@(posedge clock)begin
+  if(in_valid && in_ready) pc <= pc_in;
+end
+always@(posedge clock)begin
+  if(in_valid && in_ready) src1 <= src1_in;
+end
+always@(posedge clock)begin
+  if(in_valid && in_ready) src2 <= src2_in;
+end
+always@(posedge clock)begin
+  if(in_valid && in_ready) csr_rdata <= csr_rdata_in;
+end
+
+`else
+
 always@(posedge clock)begin
   if(reset)begin
-    {_op, _func, _imm, _pc, _src1, _src2, _csr_rdata} <= 0;
+    {op, func, imm, pc, src1, src2, csr_rdata} <= 0;
     ctrl_valid <= 0;
   end
   else begin
     if(decode_valid)begin
-      _op <= op;
-      _func <= func;
-      _imm <= imm;
-      _pc <= pc;
-      _src1 <= src1;
-      _src2 <= src2;
-      _csr_rdata <= csr_rdata;
+      op <= op_in;
+      func <= func_in;
+      imm <= imm_in;
+      pc <= pc_in;
+      src1 <= src1_in;
+      src2 <= src2_in;
+      csr_rdata <= csr_rdata_in;
       ctrl_valid <= 1;
     end
     else if(ctrl_valid)
       ctrl_valid <= 0;
   end
 end
+
+`endif
+
 `define MRET 3'b001
 `define ECALL 3'b010
 `define EBREAK 3'b011
@@ -63,31 +110,31 @@ end
     //reg sub, sign;
     //reg[31:0] read_result, rdata;
     //reg[7:0] wmask;
-    wire I = _op == 7'b0010011;
-    wire R = _op == 7'b0110011;
-    wire L = _op == 7'b0000011;
-    wire S = _op == 7'b0100011;
-    wire JAL = _op == 7'b1101111;
-    wire JALR = _op == 7'b1100111;
-    wire AUIPC = _op == 7'b0010111;
-    wire LUI = _op == 7'b0110111;
-    wire B = _op == 7'b1100011;
-    wire CSR = _op == 7'b1110011;
-    wire FENCEI = _op == 7'b0001111;
-    wire f000 = _func == 3'b000;
-    wire f001 = _func == 3'b001;
-    wire f010 = _func == 3'b010;
-    wire f011 = _func == 3'b011;
-    wire f100 = _func == 3'b100;
-    wire f101 = _func == 3'b101;
-    wire f110 = _func == 3'b110;
-    wire f111 = _func == 3'b111;
+    wire I = op == 7'b0010011;
+    wire R = op == 7'b0110011;
+    wire L = op == 7'b0000011;
+    wire S = op == 7'b0100011;
+    wire JAL = op == 7'b1101111;
+    wire JALR = op == 7'b1100111;
+    wire AUIPC = op == 7'b0010111;
+    wire LUI = op == 7'b0110111;
+    wire B = op == 7'b1100011;
+    wire CSR = op == 7'b1110011;
+    wire FENCEI = op == 7'b0001111;
+    wire f000 = func == 3'b000;
+    wire f001 = func == 3'b001;
+    wire f010 = func == 3'b010;
+    wire f011 = func == 3'b011;
+    wire f100 = func == 3'b100;
+    wire f101 = func == 3'b101;
+    wire f110 = func == 3'b110;
+    wire f111 = func == 3'b111;
 
-    assign sub = (I || R) && (f011 || f010) || B ? 1 : R && f000 ? _imm[5] : 0;
+    assign sub = (I || R) && (f011 || f010) || B ? 1 : R && f000 ? imm[5] : 0;
     assign sign = R && f010 || B && (f100 || f101) ? 1 : 0;
     assign reg_wen = !(S || B || FENCEI);
     assign alu_a = JAL || JALR || AUIPC ? _pc : LUI ? 0 : _src1;
-    assign alu_b = I || L || AUIPC || S  || LUI ? _imm : JAL || JALR ? 32'b100 :
+    assign alu_b = I || L || AUIPC || S  || LUI ? imm : JAL || JALR ? 32'b100 :
             CSR && f001 ? 32'b0 : CSR && f010 ? _csr_rdata : _src2;
     assign result_ctrl = L ? 2'b01 : CSR ? 2'b10 : 0;
     assign csr_wen = CSR;
@@ -97,12 +144,12 @@ end
     assign upc_ctrl = CSR && f000;
     assign load_ctrl = L ? _func : 0;
     assign fencei = FENCEI;
-    assign csr_ctrl = CSR ? (f000 ? (_imm[1] ? `MRET : !_imm[0] ? `ECALL : `EBREAK) :
+    assign csr_ctrl = CSR ? (f000 ? (imm[1] ? `MRET : !imm[0] ? `ECALL : `EBREAK) :
       f001 || f010 ? `CSRW : 0) : 0;
     assign alu_ctrl = I||R ? {1'b0, _func} : B ? {1'b1, func} : CSR && f010 ? OR : ADD;
     assign wmask = S ? (f000 ? 4'b0001 : f001 ? 4'b0011 : 4'b1111) : 0;
-    assign lr = R && _imm[5] == 1 || I && _imm[10] == 1;
-    assign upc = JAL || B ? _pc + _imm : JALR ? (_src1 + _imm)&~1 : 0;
+    assign lr = R && imm[5] == 1 || I && imm[10] == 1;
+    assign upc = JAL || B ? _pc + imm : JALR ? (_src1 + imm)&~1 : 0;
     /*
     always@(*)begin
         sub = 0;

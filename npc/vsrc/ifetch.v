@@ -3,8 +3,12 @@
 module ysyx_20020207_IFU(
   input clock, reset,
   input [31:0] pc_in,
-  input pc_ready,
 
+  input in_valid,
+`ifdef CONFIG_PIPELINE
+  input out_ready,
+  output in_ready, out_valid,
+`endif
   input  io_master_arready,
   output io_master_arvalid,
   output [31:0] io_master_araddr,
@@ -26,10 +30,36 @@ module ysyx_20020207_IFU(
 //`endif
 );
 
+reg[31:0] pc;
+assign pc_out = pc;
+
+`ifdef CONFIG_PIPELINE
+
 always@(posedge clock)begin
-  if(pc_ready) pc_out <= pc_in;
+  if(reset) in_ready <= 1;
+  else if(in_valid && in_ready) in_ready <= 0;
+  else if(!in_ready && out_valid && out_ready) in_ready <= 1;
 end
 
+always@(posedge clock)begin
+  if(reset) out_valid <= 0;
+  else if(!in_ready && inst_valid) out_valid <= 1;
+  else if(out_valid && out_ready) out_valid <= 0;
+end
+
+always@(posedge clock)begin
+  if(reset) pc <= 0;
+  else if(in_valid && in_ready) pc <= pc_in;
+end
+
+wire inst_require = in_valid && in_ready;
+`else
+
+always@(posedge clock)begin
+  if(in_valid) pc <= pc_in;
+end
+wire inst_require = in_valid;
+`endif
 /*always@(posedge clock)begin
   if(inst_valid)begin
     ifu_get_inst();
@@ -82,12 +112,11 @@ always@(posedge clock)begin
   end
 end
 `else*/
-wire inst_require = pc_ready;
 ICACHE icache(
   .reset(reset),
   .clock(clock),
-  .inst_require(inst_require),
-  .pc(pc_in),
+  .require(inst_require),
+  .pc(pc),
   .fencei(fencei),
   .ctrl_valid(ctrl_valid),
   .inst_valid(_inst_valid),

@@ -10,7 +10,7 @@ module ICACHE #(
 )(
   input reset,
   input clock,
-  input inst_require,
+  input require,
   input[31:0] pc,
   input fencei, ctrl_valid,
   output reg inst_valid,
@@ -50,6 +50,11 @@ wire[INDEX_SIZE - 1 : 0] index = _pc[`INDEX];
 
 reg[ICACHE_LINE - 1:0] icache[ICACHE_NUMS];
 reg refresh;
+reg inst_require;
+always@(posedge clock)begin
+  inst_require <= require;
+end
+
 
 integer i;
 
@@ -78,7 +83,7 @@ wire need_read = ~(icache[index][VALID] && icache[index][`ICACHE_TAG] == tag);
 
 reg[31:0] _pc;
 always@(posedge clock)begin
-  if(inst_require) _pc <= pc;
+  if(require) _pc <= pc;
 end
 
 reg[7:0] burst_nums;
@@ -107,7 +112,9 @@ always@(posedge clock)begin
   end
 end
 
-always@(posedge clock)begin
+
+assign inst = insts[offest];
+/*always@(posedge clock)begin
   if(reset)begin
     //cache_init();
     inst <= 0;
@@ -123,7 +130,7 @@ always@(posedge clock)begin
     end
   end
 end
-
+*/
 always@(posedge clock)begin
   if(reset) inst_valid <= 0;
   else begin

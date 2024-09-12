@@ -52,6 +52,10 @@ module ysyx_20020207_ALU(
     input [31:0] alu_a, alu_b,
     input [3:0] alu_ctrl,
     input alu_sub, alu_sign,
+  `ifdef CONFIG_PIPELINE
+    input in_valid, out_ready,
+    output out_valid, in_ready,
+  `endif
     output reg [31:0] result, lsu_addr,
     output reg ZF, OF, CF, branch, addr_valid, alu_valid
 );
@@ -143,14 +147,13 @@ module ysyx_20020207_ALU(
     Logic_32bit Logic(.a(r), .b(l), .logic_ctrl(logic_ctrl), .logic_result(results[LOGIC]));
     reg[31:0] adder_result;
     assign lsu_addr = results[ADDER];
-    wire OF, high, CF;
     always@(posedge clock)begin
       if(addr_valid) begin
-        adder_result <= result[ADDER];
+        adder_result <= results[ADDER];
       end
     end
-    wire ZF = ~(|adder_result); 
-    wire OF = l[31] == l[31] && l[31] != adder_result[31];
+    assign ZF = ~(|adder_result); 
+    assign OF = l[31] == r[31] && l[31] != adder_result[31];
     wire high = adder_result[31];
     wire cmp = sign ? OF ^ high : ~CF;
     /*wire cmp, high;

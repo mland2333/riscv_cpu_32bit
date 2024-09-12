@@ -175,7 +175,8 @@ module ysyx_20020207 #(
   wire [31:0] imm;
   reg is_exit;
   always @(posedge clock) begin
-    is_exit <= inst == 32'b00000000000100000000000001110011;
+    if(inst_valid)
+      is_exit <= inst == 32'b00000000000100000000000001110011;
   end
   wire decode_valid;
   ysyx_20020207_IDU midu (
@@ -256,6 +257,7 @@ module ysyx_20020207 #(
   wire alu_valid;
   wire ZF, OF, CF, branch;
   wire[31:0] lsu_addr;
+  wire addr_valid;
   ysyx_20020207_ALU malu (
       .clock(clock),
       .ctrl_valid(ctrl_valid),
@@ -571,7 +573,7 @@ module ysyx_20020207 #(
   end
   always@(posedge clock)begin
     if(reset) _exu_jump <= 0;
-    else _exu_jump <= 1;
+    else _exu_jump <= exu_jump;
   end
 
   assign jump = _exu_jump | alu_jump;
