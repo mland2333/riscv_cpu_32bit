@@ -1,23 +1,24 @@
 //import "DPI-C" function void lsu_get_data();
 module ysyx_20020207_LSU (
-    input clk,
-    rst,
-    ctrl_valid,
-    alu_valid,
-    input [31:0] raddr,
-    waddr,
-    wdata,
-    input ren,
-    wen,
-    input [3:0] wmask,
-    input [2:0] load_ctrl,
+    input clock,
+    input reset,
+    input [31:0] addr,
+    input [31:0] wdata_in,
+    input ren_in,
+    input wen_in,
+    input [3:0] wmask_in,
+    input [2:0] load_ctrl_in,
     output reg [31:0] rdata,
-    output lsu_finish,
-    
-  `ifdef CONFIG_PIPELINE
-    input in_valid, out_ready,
-    output out_valid, in_ready,
-  `endif
+    input reg_wen_in,
+    input reg_addr_in,
+    output reg_wen_out,
+    output reg_addr_out,
+    input  in_valid,
+    output out_valid,
+`ifdef CONFIG_PIPELINE
+    input  out_ready,
+    output in_ready,
+`endif
 
     input io_master_awready,
     output io_master_awvalid,
@@ -25,7 +26,7 @@ module ysyx_20020207_LSU (
     /*output [3:0] io_master_awid,
   output [7:0] io_master_awlen,
   output [2:0] io_master_awsize,
-  output [1:0] io_master_awburst,*/
+  output [1:0] io_master_awbureset,*/
 
     input io_master_wready,
     output io_master_wvalid,
@@ -44,7 +45,7 @@ module ysyx_20020207_LSU (
     /*output [3:0] io_master_arid,
   output [7:0] io_master_arlen,
   output [2:0] io_master_arsize,
-  output [1:0] io_master_arburst,*/
+  output [1:0] io_master_arbureset,*/
 
     output io_master_rready,
     input io_master_rvalid,
@@ -53,6 +54,86 @@ module ysyx_20020207_LSU (
     //input  io_master_rlast
     //input  [3:0] io_master_rid,
 );
+  reg [31:0] waddr, raddr, wdata;
+  reg wen, ren;
+  reg [3:0] wmask;
+  reg [2:0] load_ctrl;
+  reg reg_wen;
+  reg[4:0] reg_addr;
+`ifdef CONFIG_PIPELINE
+  always @(posedge clock) begin
+    if (reset) in_ready <= 1;
+    else if (in_valid && in_ready) in_ready <= 0;
+    else if (!in_ready && out_valid && out_ready) in_ready <= 1;
+  end
+
+  always @(posedge clock) begin
+    if (reset) out_valid <= 0;
+    else if (!in_ready && lsu_finish) out_valid <= 1;
+    else if (out_valid && out_ready) out_valid <= 0;
+  end
+
+  always @(posedge clock) begin
+    if (in_valid && in_ready) waddr <= addr;
+  end
+  always @(posedge clock) begin
+    if (in_valid && in_ready) raddr <= addr;
+  end
+  always @(posedge clock) begin
+    if (in_valid && in_ready) wen <= wen_in;
+    else if (lsu_finish) wen <= 0;
+  end
+  always @(posedge clock) begin
+    if (in_valid && in_ready) ren <= ren_in;
+    else if (lsu_finish) ren <= 0;
+  end
+  always @(posedge clock) begin
+    if (in_valid && in_ready) wmask <= wmask_in;
+  end
+  always @(posedge clock) begin
+    if (in_valid && in_ready) load_ctrl <= load_ctrl_in;
+  end
+  always@(posedge clock)begin
+    if(in_valid && in_ready) reg_wen <= reg_wen_in;
+  end
+  always@(posedge clock)begin
+    if(in_valid && in_ready) reg_addr <= reg_addr_in;
+  end
+`else
+  always @(posedge clock) begin
+    if (in_valid) waddr <= addr;
+  end
+  always @(posedge clock) begin
+    if (in_valid) raddr <= addr;
+  end
+  always @(posedge clock) begin
+    if (in_valid) wen <= wen_in;
+    else if (lsu_finish) wen <= 0;
+  end
+  always @(posedge clock) begin
+    if (in_valid) ren <= ren_in;
+    else if (lsu_finish) ren <= 0;
+  end
+  always @(posedge clock) begin
+    if (in_valid) wmask <= wmask_in;
+  end
+  always @(posedge clock) begin
+    if (in_valid) load_ctrl <= load_ctrl_in;
+  end
+  always@(posedge clock)begin
+    if(in_valid) reg_wen <= reg_wen_in;
+  end
+  always@(posedge clock)begin
+    if(in_valid) reg_addr <= reg_addr_in;
+  end
+  always @(posedge clock) begin
+    if (reset) out_valid <= 0;
+    else if (lsu_finish) out_valid <= 1;
+    else if (out_valid) out_valid <= 0;
+  end
+`endif
+  assign reg_addr_out = reg_addr;
+  assign reg_wen_out = reg_wen;
   localparam IDLE = 2'b00;
   localparam TRAN1 = 2'b01;
   localparam TRAN2 = 2'b10;
@@ -72,12 +153,12 @@ module ysyx_20020207_LSU (
         io_master_awid      =   'b0       ,
         io_master_awlen     =   'b0       ,
         io_master_awsize    =   'b0       ,
-        io_master_awburst   =   'b0       ,
+        io_master_awbureset   =   'b0       ,
         io_master_wlast     =   'b0       ,
         io_master_arid      =   'b0       ,
         io_master_arlen     =   'b0       ,
         io_master_arsize    =   'b0       ,
-        io_master_arburst   =   'b0       */;
+        io_master_arbureset   =   'b0       */;
   reg [3:0] wstrb, wstrb1;
   reg [31:0] _wdata;
   reg w_tran_nums;
@@ -119,11 +200,6 @@ module ysyx_20020207_LSU (
   reg [31:0] _rdata;
   reg [31:0] rdata0, rdata1;
   reg r_tran_nums;
-  reg[2:0] _load_ctrl;
-  always@(posedge clk)begin
-    if(rst) _load_ctrl <= 0;
-    else if(ctrl_valid) _load_ctrl <= load_ctrl;
-  end
 
   always @(*) begin
     r_tran_nums = 0;
@@ -132,7 +208,7 @@ module ysyx_20020207_LSU (
         _rdata = rdata0[31:0];
       end
       2'b01: begin
-        if (_load_ctrl[1]) begin
+        if (load_ctrl[1]) begin
           r_tran_nums = 1;
           _rdata = {rdata0[7:0], rdata1[31:8]};
         end else begin
@@ -141,7 +217,7 @@ module ysyx_20020207_LSU (
         end
       end
       2'b10: begin
-        if (_load_ctrl[1]) begin
+        if (load_ctrl[1]) begin
           r_tran_nums = 1;
           _rdata = {rdata0[15:0], rdata1[31:16]};
         end else begin
@@ -150,7 +226,7 @@ module ysyx_20020207_LSU (
         end
       end
       2'b11: begin
-        if (_load_ctrl[1] || _load_ctrl[0]) begin
+        if (load_ctrl[1] || load_ctrl[0]) begin
           r_tran_nums = 1;
           _rdata = {rdata0[23:0], rdata1[31:24]};
         end else begin
@@ -164,8 +240,8 @@ module ysyx_20020207_LSU (
   reg read_wait_ready, write_wait_ready;
   reg [1:0] read_state;
   //load
-  always @(posedge clk) begin
-    if (rst) begin
+  always @(posedge clock) begin
+    if (reset) begin
       arvalid <= 0;
       read_state <= IDLE;
       rready <= 1;
@@ -173,7 +249,7 @@ module ysyx_20020207_LSU (
       case (read_state)
         IDLE: begin
           io_master_araddr <= 0;
-          if (ren && alu_valid) begin
+          if (ren) begin
             arvalid <= 1;
             io_master_araddr <= raddr;
             if (r_tran_nums == 1) read_state <= TRAN2;
@@ -207,8 +283,8 @@ module ysyx_20020207_LSU (
   end
   //store
   reg [1:0] write_state;
-  always @(posedge clk) begin
-    if (rst) begin
+  always @(posedge clock) begin
+    if (reset) begin
       awvalid <= 0;
       write_state <= IDLE;
       bready <= 1;
@@ -216,9 +292,9 @@ module ysyx_20020207_LSU (
       case (write_state)
         IDLE: begin
           io_master_awaddr <= 0;
-          if (wen && alu_valid) begin
-            awvalid <= wen;
-            wvalid <= wen;
+          if (wen) begin
+            awvalid <= 1;
+            wvalid <= 1;
             io_master_awaddr <= waddr;
             _wstrb <= wstrb;
             if (w_tran_nums == 1) write_state <= TRAN2;
@@ -254,14 +330,11 @@ module ysyx_20020207_LSU (
     end
   end
 
-  always @(posedge clk) begin
-    lsu_finish <= (~lsu_finish) && ((alu_valid & ~wen &~ren)
-                || wen&&io_master_bvalid&&(write_state==TRAN1)
-                || ren&&io_master_rvalid&&(read_state ==TRAN1));
-  end
+  wire lsu_finish = io_master_bvalid&&(write_state==TRAN1)
+                      || io_master_rvalid&&(read_state ==TRAN1);
 
   always @(*) begin
-    case (_load_ctrl)
+    case (load_ctrl)
       3'b000:  rdata = {{24{_rdata[7]}}, _rdata[7:0]};
       3'b001:  rdata = {{16{_rdata[15]}}, _rdata[15:0]};
       3'b010:  rdata = _rdata;
@@ -271,5 +344,5 @@ module ysyx_20020207_LSU (
     endcase
   end
 endmodule
- 
+
 

@@ -72,9 +72,9 @@ module ysyx_20020207 #(
 );
   //import "DPI-C" function void exu_finish_cal();
   wire [DATA_WIDTH-1 : 0] inst;
-  reg [DATA_WIDTH-1 : 0] pc, upc;
+  reg [DATA_WIDTH-1 : 0] pc, upc, ifu_pc, idu_pc;
   wire [31:0] result;
-  reg mem_wen, jump, lsu_finish, is_diff_skip;
+  reg mem_wen, jump, is_diff_skip;
   wire diff_skip;
 
   always @(posedge clock) begin
@@ -87,11 +87,11 @@ module ysyx_20020207 #(
       io_master_awburst = 'b0,
       io_master_wlast = 'b1,
       io_master_arid = 'b0,
-    //`ifdef CONFIG_BURST
+      //`ifdef CONFIG_BURST
       io_master_arlen = is_ifu ? ifu_arlen : 8'b0,
       io_master_arsize = is_ifu ? ifu_arsize : func[1] ? 3'b010 : func[0] ? 3'b001 : 3'b0,
       io_master_arburst = is_ifu ? ifu_arburst : 2'b0;
-    /*`else
+  /*`else
       io_master_arlen = 8'b0,
       io_master_arsize  = 3'b010,
       io_master_arburst = 2'b0;
@@ -99,53 +99,64 @@ module ysyx_20020207 #(
   `endif*/
 
   reg  pc_wen;
-  wire pc_ready;
+  wire pc_valid;
   ysyx_20020207_PC #(DATA_WIDTH) mpc (
       .clk(clock),
       .rst(reset),
+      .out_valid(pc_valid),
+`ifdef CONFIG_PIPELINE
+      .out_ready(ifu_ready),
+`else
       .wen(pc_wen),
+`endif
       .upc(upc),
       .jump(jump),
       .pc(pc),
-      .pc_ready(pc_ready)
   );
 
   reg diff;
   always @(posedge clock) begin
-    if (reset) diff <= 0;
-    else begin
-      if (pc_wen && ~diff) diff <= 1;
-      else diff <= 0;
-    end
+    if (pc_wen && ~diff) diff <= 1;
+    else diff <= 0;
   end
 
   always @(posedge clock) begin
-    if (reset) pc_wen <= 0;
-    else if (lsu_finish) pc_wen <= 1;
+    if (lsu_valid) pc_wen <= 1;
     else pc_wen <= 0;
   end
-  
+
   reg is_ifu;
-  always@(posedge clock)begin
-    if(reset) is_ifu <= 0;
-    else if(pc_ready) is_ifu <= 1;
-    else if(inst_valid) is_ifu <= 0;
+  always @(posedge clock) begin
+    if (reset) is_ifu <= 0;
+    else if (pc_valid) is_ifu <= 1;
+    else if (ifu_valid) is_ifu <= 0;
   end
 
   wire ifu_arready, ifu_arvalid, ifu_rready;
   wire ifu_rvalid, ifu_rlast;
-  wire [1:0] ifu_rresp;
+  wire [ 1:0] ifu_rresp;
   wire [31:0] ifu_rdata;
-  wire [31:0] ifu_araddr, ifu_pc;
-  wire [7:0] ifu_arlen;
-  wire [2:0] ifu_arsize;
-  wire [1:0] ifu_arburst;
-  reg inst_valid;
+  wire [31:0] ifu_araddr;
+  wire [ 7:0] ifu_arlen;
+  wire [ 2:0] ifu_arsize;
+  wire [ 1:0] ifu_arburst;
+  wire pc_valid, ifu_valid, idu_valid, exu_valid, alu_valid, lsu_valid;
+`ifdef CONFIG_PIPELINE
+  wire ifu_ready, idu_ready, exu_ready, alu_ready, lsu_ready, reg_ready;
+  wire alu_lsu_ready = alu_ready & lsu_ready;
+`endif
+
   ysyx_20020207_IFU mifu (
       .clock(clock),
       .reset(reset),
       .pc_in(pc),
-      .pc_ready(pc_ready),
+      .pc_out(ifu_pc),
+      .in_valid(pc_valid),
+      .out_valid(ifu_valid),
+`ifdef CONFIG_PIPELINE
+      .in_ready(ifu_ready),
+      .out_ready(idu_ready),
+`endif
       .inst(inst),
       .io_master_rvalid(ifu_rvalid),
       .io_master_arready(ifu_arready),
@@ -154,61 +165,66 @@ module ysyx_20020207 #(
       .io_master_arvalid(ifu_arvalid),
       .io_master_rready(ifu_rready),
       .io_master_araddr(ifu_araddr),
-      .inst_valid(inst_valid),
-      .fencei(fencei),
-      .ctrl_valid(ctrl_valid),
-      .pc_out(ifu_pc)
-    //`ifdef CONFIG_BURST
-      ,
-      .io_master_arlen(ifu_arlen),
+      .fencei(fencei)
+      //`ifdef CONFIG_BURST
+      , .io_master_arlen(ifu_arlen),
       .io_master_arsize(ifu_arsize),
       .io_master_arburst(ifu_arburst),
       .io_master_rlast(ifu_rlast)
-    //`endif
+      //`endif
   );
   /*always @(posedge clock) begin
     if (ctrl_valid) exu_finish_cal();
   end*/
   wire [6:0] op;
   wire [2:0] func;
-  wire [4:0] rs1, rs2, rd;
+  wire [4:0] rs1, rs2;
+  wire [4:0] idu_rd, exu_rd, alu_rd, lsu_rd;
   wire [31:0] imm;
   reg is_exit;
   always @(posedge clock) begin
-    if(inst_valid)
-      is_exit <= inst == 32'b00000000000100000000000001110011;
+    if (ifu_valid) is_exit <= inst == 32'b00000000000100000000000001110011;
   end
-  wire decode_valid;
   ysyx_20020207_IDU midu (
       .clock(clock),
       .reset(reset),
-      .inst_valid(inst_valid),
+      .in_valid(ifu_valid),
+      .out_valid(idu_valid),
+`ifdef CONFIG_PIPELINE
+      .in_ready(idu_ready),
+      .out_ready(exu_ready),
+`endif
+      .inst_in(inst),
+      .pc_in(ifu_pc),
+      .pc_out(idu_pc),
       .inst(inst),
       .op(op),
       .func(func),
       .rs1(rs1),
       .rs2(rs2),
-      .rd(rd),
+      .rd(idu_rd),
       .imm(imm),
-      .decode_valid(decode_valid)
   );
 
   wire [DATA_WIDTH-1 : 0] src1, src2, reg_wdata;
   wire reg_wen;
   ysyx_20020207_RegisterFile #(4, DATA_WIDTH) mreg (
       .clk(clock),
-      .rst(reset),
-      .lsu_finish(lsu_finish),
+      .in_valid(reg_wdata_valid),
       .rdata1(src1),
       .raddr1(rs1[3:0]),
       .rdata2(src2),
       .raddr2(rs2[3:0]),
       .wdata(reg_wdata),
-      .waddr(rd[3:0]),
+      .waddr(reg_waddr[3:0]),
       .wen(reg_wen)
   );
-
-
+  wire reg_ready = 1;
+  wire reg_wdata_valid = lsu_valid | alu_valid;
+  wire [31:0] reg_wdata = lsu_valid ? mem_rdata : alu_result;
+  wire reg_waddr = lsu_valid ? lsu_rd : alu_rd;
+  wire reg_wen = lsu_valid ? lsu_reg_wen : alu_reg_wen;
+  wire exu_reg_wen, lsu_reg_wen;
   wire [31:0] csr_rdata, csr_wdata;
   wire upc_ctrl;
   reg csr_wen;
@@ -220,24 +236,30 @@ module ysyx_20020207 #(
   wire [1:0] result_ctrl;
   wire mem_ren, alu_sub, alu_sign, exu_jump;
   wire [31:0] alu_result;
-  wire [2:0] load_ctrl;
-  wire ctrl_valid;
-  wire fencei, lr;
+  wire [ 2:0] load_ctrl;
+  wire fencei, is_arch;
   ysyx_20020207_EXU #(DATA_WIDTH) mexu (
       .clock(clock),
       .reset(reset),
-      .decode_valid(decode_valid),
+      .in_valid(idu_valid),
+      .out_valid(exu_valid),
+`ifdef CONFIG_PIPELINE
+      .in_ready(exu_ready),
+      .out_ready(alu_lsu_ready),
+`endif
       .op(op),
       .func(func),
       .src1(src1),
       .src2(src2),
+      .rd_in(idu_rd),
+      .rd_out(exu_rd),
       .imm(imm),
-      .pc(ifu_pc),
+      .pc(idu_pc),
       .csr_rdata(csr_rdata),
       .upc(exu_upc),
       .alu_a(alu_a),
       .alu_b(alu_b),
-      .reg_wen(reg_wen),
+      .reg_wen(exu_reg_wen),
       .jump(exu_jump),
       .mem_wen(mem_wen),
       .mem_ren(mem_ren),
@@ -251,30 +273,34 @@ module ysyx_20020207 #(
       .wmask(wmask),
       .load_ctrl(load_ctrl),
       .fencei(fencei),
-      .lr(lr),
-      .ctrl_valid(ctrl_valid)
+      .is_arch(is_arch),
   );
   wire alu_valid;
   wire ZF, OF, CF, branch;
-  wire[31:0] lsu_addr;
-  wire addr_valid;
+  wire [31:0] lsu_addr;
   ysyx_20020207_ALU malu (
       .clock(clock),
-      .ctrl_valid(ctrl_valid),
-      .lr(lr),
-      .alu_a(alu_a),
-      .alu_b(alu_b),
-      .alu_ctrl(alu_ctrl),
-      .alu_sub(alu_sub),
-      .alu_sign(alu_sign),
+      .in_valid(exu_valid & !is_lsu),
+      .out_valid(alu_valid),
+`ifdef CONFIG_PIPELINE
+      .in_ready(alu_ready),
+      .out_ready(reg_ready),
+`endif
+      .reg_wen_in(exu_reg_wen),
+      .reg_addr_in(exu_rd),
+      .reg_wen_out(alu_reg_wen),
+      .reg_addr_out(alu_rd),
+      .is_arch_in(is_arch),
+      .a_in(alu_a),
+      .b_in(alu_b),
+      .ctrl_in(alu_ctrl),
+      .sub_in(alu_sub),
+      .sign_in(alu_sign),
       .result(alu_result),
-      .lsu_addr(lsu_addr),
       .ZF(ZF),
       .OF(OF),
       .CF(CF),
-      .branch(branch),
-      .addr_valid(addr_valid),
-      .alu_valid(alu_valid)
+      .branch(branch)
   );
   reg [31:0] mem_rdata, mem_wdata;
   wire [31:0] mem_raddr, mem_waddr;
@@ -288,10 +314,18 @@ module ysyx_20020207 #(
   assign mem_waddr = lsu_addr;
   assign mem_wdata = src2;
   ysyx_20020207_LSU mlsu (
-      .clk(clock),
-      .rst(reset),
-      .ctrl_valid(ctrl_valid),
-      .alu_valid(addr_valid),
+      .clock(clock),
+      .reset(reset),
+      .in_valid(exu_valid & need_lsu),
+      .out_valid(lsu_valid),
+`ifdef CONFIG_PIPELINE
+      .in_ready(lsu_ready),
+      .out_ready(reg_ready),
+`endif
+      .reg_wen_in(exu_reg_wen),
+      .reg_addr_in(exu_rd),
+      .reg_wen_out(lsu_reg_wen),
+      .reg_addr_out(lsu_rd),
       .raddr(mem_raddr),
       .waddr(mem_waddr),
       .wdata(mem_wdata),
@@ -299,7 +333,6 @@ module ysyx_20020207 #(
       .wen(mem_wen),
       .wmask(wmask),
       .rdata(mem_rdata),
-      .lsu_finish(lsu_finish),
       .load_ctrl(load_ctrl),
       .io_master_rvalid(lsu_rvalid),
       .io_master_arready(lsu_arready),
@@ -334,9 +367,9 @@ module ysyx_20020207 #(
       .rvalid1 (ifu_rvalid),
       .rresp1  (ifu_rresp),
       .rdata1  (ifu_rdata),
-    //`ifdef CONFIG_BURST
+      //`ifdef CONFIG_BURST
       .rlast1  (ifu_rlast),
-    //`endif
+      //`endif
       .arvalid2(lsu_arvalid),
       .rready2 (lsu_rready),
       .araddr2 (lsu_araddr),
@@ -355,29 +388,28 @@ module ysyx_20020207 #(
       .bvalid2 (lsu_bvalid),
       .bresp2  (lsu_bresp),
 
-      .arready(arready),
-      .rvalid (rvalid),
-      .awready(awready),
-      .wready (wready),
-      .bvalid (bvalid),
-      .rresp  (rresp),
-      .bresp  (bresp),
-      .rdata  (rdata),
-      .arvalid(arvalid),
-      .rready (rready),
-      .awvalid(awvalid),
-      .wvalid (wvalid),
-      .bready (bready),
-      .araddr (araddr),
-      .awaddr (awaddr),
-      .wdata  (wdata),
-      .wstrb  (wstrb)
-    //`ifdef CONFIG_BURST
-      ,
-      .rlast  (io_master_rlast)
-    //`endif
+        .arready(arready),
+        .rvalid (rvalid),
+        .awready(awready),
+        .wready (wready),
+        .bvalid (bvalid),
+        .rresp  (rresp),
+        .bresp  (bresp),
+        .rdata  (rdata),
+        .arvalid(arvalid),
+        .rready (rready),
+        .awvalid(awvalid),
+        .wvalid (wvalid),
+        .bready (bready),
+        .araddr (araddr),
+        .awaddr (awaddr),
+        .wdata  (wdata),
+        .wstrb  (wstrb)
+      //`ifdef CONFIG_BURST
+      , .rlast  (io_master_rlast)
+      //`endif
   );
-/*`ifndef CONFIG_YSYXSOC
+  /*`ifndef CONFIG_YSYXSOC
   wire sram_arvalid, sram_rready, sram_awvalid, sram_wvalid, sram_bready, sram_wready;
   wire sram_rvalid, sram_bvalid, sram_awready, sram_arready;
   wire [31:0] sram_araddr, sram_awaddr;
@@ -419,7 +451,7 @@ module ysyx_20020207 #(
       .wready   (wready),
       .bvalid   (bvalid),
       .bresp    (bresp),
-/*`ifndef CONFIG_YSYXSOC
+      /*`ifndef CONFIG_YSYXSOC
       .arvalid1 (sram_arvalid),
       .rready1  (sram_rready),
       .araddr1  (sram_araddr),
@@ -455,7 +487,7 @@ module ysyx_20020207 #(
       .wready1  (io_master_wready),
       .bvalid1  (io_master_bvalid),
       .bresp1   (io_master_bresp),
-//`endif
+      //`endif
       .arvalid2 (clint_arvalid),
       .rready2  (clint_rready),
       .araddr2  (clint_araddr),
@@ -464,7 +496,7 @@ module ysyx_20020207 #(
       .rresp2   (clint_rresp),
       .rdata2   (clint_rdata),
       .high     (clint_high),
-/*
+      /*
     `ifndef CONFIG_YSYXSOC
       .arvalid3 (uart_arvalid),
       .rready3  (uart_rready),
@@ -488,7 +520,7 @@ module ysyx_20020207 #(
       .diff_skip(diff_skip)
   );
 
-/*`ifndef CONFIG_YSYXSOC
+  /*`ifndef CONFIG_YSYXSOC
   SRAM msram (
       .clk(clock),
       .rst(reset),
@@ -567,12 +599,12 @@ module ysyx_20020207 #(
   );
   reg alu_jump;
   reg _exu_jump;
-  always@(posedge clock)begin
-    if(reset) alu_jump <= 0;
+  always @(posedge clock) begin
+    if (reset) alu_jump <= 0;
     else alu_jump <= branch;
   end
-  always@(posedge clock)begin
-    if(reset) _exu_jump <= 0;
+  always @(posedge clock) begin
+    if (reset) _exu_jump <= 0;
     else _exu_jump <= exu_jump;
   end
 
@@ -580,9 +612,9 @@ module ysyx_20020207 #(
   assign csr_wdata = alu_result;
   assign result = result_ctrl == 2'b0 ? alu_result : (result_ctrl == 2'b01 ? mem_rdata : csr_rdata);
   assign reg_wdata = result;
-  reg[31:0] _exu_upc;
-  always@(posedge clock)begin
-    if(ctrl_valid) _exu_upc <= exu_upc;
+  reg [31:0] _exu_upc;
+  always @(posedge clock) begin
+    if (exu_valid) _exu_upc <= exu_upc;
   end
   always @(*) begin
     if (upc_ctrl == 0) upc = _exu_upc;

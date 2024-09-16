@@ -1,36 +1,58 @@
-module ysyx_20020207_PC#(DATA_WIDTH) (
-    input clk, rst, wen,
+module ysyx_20020207_PC #(
+    DATA_WIDTH
+) (
+    input clock,
+    input reset,
+    output out_valid,
+`ifdef CONFIG_PIPELINE
+    input out_ready,
+`else
+    input wen,
+`endif
     input [DATA_WIDTH-1 : 0] upc,
     input jump,
-    output reg[DATA_WIDTH-1 : 0] pc,
-    output reg pc_ready
+    output reg [DATA_WIDTH-1 : 0] pc
 );
-    //reg pc_wen;
-    reg after_rst;
-    always@(posedge clk)begin
-        //pc_wen <= wen;
-        if(rst) begin
-          //`ifdef CONFIG_YSYXSOC
-          pc <= 32'h30000000;
-          //`else
-          //pc <= 32'h80000000;
-          //`endif
-          pc_ready <= 0;
-          after_rst <= 1;
-        end
-        else if(wen) begin
-          if(jump) pc <= upc;
-          else pc <= pc + 4;
-          pc_ready <= 1;
-          //$display("pc = %h\n", pc);
-        end
-        else if(after_rst)begin
-          after_rst <= 0;
-          pc_ready <= 1;
-        end
-        else begin
-          pc_ready <= 0;
-        end
+  reg after_rst;
+  always @(posedge clock) begin
+    if (reset) after_rst <= 1;
+    else after_rst <= 0;
+  end
+`ifdef CONFIG_PIPELINE
+  always @(posedge clock) begin
+    if (reset | out_valid && out_ready) out_valid <= 0;
+    else if (!out_valid | after_rst) out_valid <= 1;
+  end
+  always @(posedge clk) begin
+    if (reset) begin
+      //`ifdef CONFIG_YSYXSOC
+      pc <= 32'h30000000;
+      //`else
+      //pc <= 32'h80000000;
+      //`endif
+    end else if (out_valid && out_ready) begin
+      pc <= pc + 4;
     end
+  end
+
+`else
+  always @(posedge clock) begin
+    if (wen | after_rst) out_valid <= 1;
+    else out_valid <= 0;
+  end
+
+  always @(posedge clk) begin
+    if (reset) begin
+      //`ifdef CONFIG_YSYXSOC
+      pc <= 32'h30000000;
+      //`else
+      //pc <= 32'h80000000;
+      //`endif
+    end else if (wen) begin
+      if (jump) pc <= upc;
+      else pc <= pc + 4;
+    end
+  end
+`endif
 endmodule
 

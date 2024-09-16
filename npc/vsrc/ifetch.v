@@ -1,76 +1,73 @@
 //import "DPI-C" function void ifu_get_inst();
 //import "DPI-C" function void idu_decode_inst(input int inst);
-module ysyx_20020207_IFU(
-  input clock, reset,
-  input [31:0] pc_in,
-
-  input in_valid,
+module ysyx_20020207_IFU (
+    input clock,
+    input reset,
+    input [31:0] pc_in,
+    output [31:0] pc_out,
+    input in_valid,
+    output out_valid,
 `ifdef CONFIG_PIPELINE
-  input out_ready,
-  output in_ready, out_valid,
+    input out_ready,
+    output in_ready,
 `endif
-  input  io_master_arready,
-  output io_master_arvalid,
-  output [31:0] io_master_araddr,
-  
-  output reg io_master_rready,
-  input  io_master_rvalid,
-  input  [1:0] io_master_rresp,
-  input  [31:0] io_master_rdata,
+    input io_master_arready,
+    output io_master_arvalid,
+    output [31:0] io_master_araddr,
 
-  output reg[31:0]inst, pc_out,
-  input fencei, ctrl_valid,
-  output inst_valid
-//`ifdef CONFIG_BURST
-  ,
-  output [7:0] io_master_arlen,
-  output [2:0] io_master_arsize,
-  output [1:0] io_master_arburst,
-  input io_master_rlast
-//`endif
+    output reg io_master_rready,
+    input io_master_rvalid,
+    input [1:0] io_master_rresp,
+    input [31:0] io_master_rdata,
+
+    output reg [31:0] inst,
+    input fencei
+    //`ifdef CONFIG_BURST
+    , output [7:0] io_master_arlen,
+    output [2:0] io_master_arsize,
+    output [1:0] io_master_arburst,
+    input io_master_rlast
+    //`endif
 );
 
-reg[31:0] pc;
-assign pc_out = pc;
+  reg [31:0] pc;
+  assign pc_out = pc;
 
 `ifdef CONFIG_PIPELINE
 
-always@(posedge clock)begin
-  if(reset) in_ready <= 1;
-  else if(in_valid && in_ready) in_ready <= 0;
-  else if(!in_ready && out_valid && out_ready) in_ready <= 1;
-end
+  always @(posedge clock) begin
+    if (reset) in_ready <= 1;
+    else if (in_valid && in_ready) in_ready <= 0;
+    else if (!in_ready && out_valid && out_ready) in_ready <= 1;
+  end
 
-always@(posedge clock)begin
-  if(reset) out_valid <= 0;
-  else if(!in_ready && inst_valid) out_valid <= 1;
-  else if(out_valid && out_ready) out_valid <= 0;
-end
+  always @(posedge clock) begin
+    if (reset) out_valid <= 0;
+    else if (!in_ready && inst_valid) out_valid <= 1;
+    else if (out_valid && out_ready) out_valid <= 0;
+  end
 
-always@(posedge clock)begin
-  if(reset) pc <= 0;
-  else if(in_valid && in_ready) pc <= pc_in;
-end
+  always @(posedge clock) begin
+    if (reset) pc <= 0;
+    else if (in_valid && in_ready) pc <= pc_in;
+  end
 
-wire inst_require = in_valid && in_ready;
+  wire inst_require = in_valid && in_ready;
 `else
 
-always@(posedge clock)begin
-  if(in_valid) pc <= pc_in;
-end
-wire inst_require = in_valid;
+  always @(posedge clock) begin
+    if (in_valid) pc <= pc_in;
+  end
+  wire inst_require = in_valid;
 `endif
-/*always@(posedge clock)begin
+  /*always@(posedge clock)begin
   if(inst_valid)begin
     ifu_get_inst();
     idu_decode_inst(inst);
   end
 end*/
-reg _inst_valid;
-assign inst_valid = _inst_valid;
 
-
-/*`ifndef CONFIG_ICACHE
+  /*`ifndef CONFIG_ICACHE
 reg _arvalid;
 assign io_master_arvalid = _arvalid;
 reg[31:0] araddr;
@@ -112,30 +109,29 @@ always@(posedge clock)begin
   end
 end
 `else*/
-ICACHE icache(
-  .reset(reset),
-  .clock(clock),
-  .require(inst_require),
-  .pc(pc),
-  .fencei(fencei),
-  .ctrl_valid(ctrl_valid),
-  .inst_valid(_inst_valid),
-  .inst(inst),
-  .arvalid(io_master_arvalid),
-  .arready(io_master_arready),
-  .rvalid(io_master_rvalid),
-  .rready(io_master_rready),
-  .rdata(io_master_rdata),
-  .araddr(io_master_araddr)
-//`ifdef CONFIG_BURST
-    ,
-  .arlen(io_master_arlen),
-  .arsize(io_master_arsize),
-  .arburst(io_master_arburst),
-  .rlast(io_master_rlast)
-//`endif
-);
-//`endif
+  ICACHE icache (
+      .reset(reset),
+      .clock(clock),
+      .require(inst_require),
+      .pc(pc),
+      .fencei(fencei),
+      .ctrl_valid(ctrl_valid),
+      .inst_valid(inst_valid),
+      .inst(inst),
+      .arvalid(io_master_arvalid),
+      .arready(io_master_arready),
+      .rvalid(io_master_rvalid),
+      .rready(io_master_rready),
+      .rdata(io_master_rdata),
+      .araddr(io_master_araddr)
+      //`ifdef CONFIG_BURST
+      , .arlen(io_master_arlen),
+      .arsize(io_master_arsize),
+      .arburst(io_master_arburst),
+      .rlast(io_master_rlast)
+      //`endif
+  );
+  //`endif
 
 endmodule
 

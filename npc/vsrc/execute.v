@@ -1,25 +1,28 @@
 module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     input clock,
     input reset,
-    input decode_valid,
     input [6:0] op_in,
     input [2:0] func_in,
     input [DATA_WIDTH-1:0]src1_in, src2_in, imm_in, pc_in, csr_rdata_in,
+    input in_valid,
+    output out_valid,
   `ifdef CONFIG_PIPELINE
-    input in_valid, out_ready,
-    output out_valid, in_ready,
+    input out_ready,
+    output in_ready,
   `endif
-    output reg[DATA_WIDTH-1:0]upc, alu_a, alu_b,
-    output reg reg_wen,
-    output wire jump, mem_wen, mem_ren, csr_wen,
-    output reg[2:0] csr_ctrl,
-    output reg[3:0] alu_ctrl,
-    output reg[1:0] result_ctrl,
-    output reg upc_ctrl, sub, sign,
-    output reg[3:0] wmask,
-    output reg[2:0] load_ctrl,
-    output fencei, lr,
-    output reg ctrl_valid
+    output [DATA_WIDTH-1:0]upc, alu_a, alu_b,
+    output [31:0] lsu_addr,
+    output reg_wen,
+    output jump, mem_wen, mem_ren, csr_wen,
+    output [2:0] csr_ctrl,
+    output [3:0] alu_ctrl,
+    output [1:0] result_ctrl,
+    output upc_ctrl, sub, sign,
+    output [3:0] wmask,
+    output [2:0] load_ctrl,
+    output fencei,
+    output is_arch,
+    output need_lsu
 );
 
 reg[6:0] op;
@@ -27,7 +30,6 @@ reg[2:0] func;
 reg[31:0] imm, pc, src1, src2, csr_rdata;
 
 `ifdef CONFIG_PIPELINE
-reg[31:0] pc;
 always@(posedge clock)begin
   if(reset) in_ready <= 1;
   else if(in_valid && in_ready) in_ready <= 0;
@@ -36,7 +38,7 @@ end
 
 always@(posedge clock)begin
   if(reset) out_valid <= 0;
-  else if(!in_ready && inst_valid) out_valid <= 1;
+  else if(in_valid && in_ready) out_valid <= 1;
   else if(out_valid && out_ready) out_valid <= 0;
 end
 
@@ -70,7 +72,7 @@ always@(posedge clock)begin
     ctrl_valid <= 0;
   end
   else begin
-    if(decode_valid)begin
+    if(in_valid)begin
       op <= op_in;
       func <= func_in;
       imm <= imm_in;
@@ -78,10 +80,10 @@ always@(posedge clock)begin
       src1 <= src1_in;
       src2 <= src2_in;
       csr_rdata <= csr_rdata_in;
-      ctrl_valid <= 1;
+      out_valid <= 1;
     end
-    else if(ctrl_valid)
-      ctrl_valid <= 0;
+    else if(out_valid)
+      out_valid <= 0;
   end
 end
 
@@ -133,23 +135,27 @@ end
     assign sub = (I || R) && (f011 || f010) || B ? 1 : R && f000 ? imm[5] : 0;
     assign sign = R && f010 || B && (f100 || f101) ? 1 : 0;
     assign reg_wen = !(S || B || FENCEI);
-    assign alu_a = JAL || JALR || AUIPC ? _pc : LUI ? 0 : _src1;
+    assign alu_a = JAL || JALR || AUIPC ? pc : LUI ? 0 : src1;
     assign alu_b = I || L || AUIPC || S  || LUI ? imm : JAL || JALR ? 32'b100 :
-            CSR && f001 ? 32'b0 : CSR && f010 ? _csr_rdata : _src2;
+            CSR && f001 ? 32'b0 : CSR && f010 ? csr_rdata : src2;
     assign result_ctrl = L ? 2'b01 : CSR ? 2'b10 : 0;
     assign csr_wen = CSR;
     assign mem_wen = S;
     assign mem_ren = L;
     assign jump = JAL || JALR || CSR && f000;
     assign upc_ctrl = CSR && f000;
-    assign load_ctrl = L ? _func : 0;
+    assign load_ctrl = L ? func : 0;
     assign fencei = FENCEI;
     assign csr_ctrl = CSR ? (f000 ? (imm[1] ? `MRET : !imm[0] ? `ECALL : `EBREAK) :
       f001 || f010 ? `CSRW : 0) : 0;
-    assign alu_ctrl = I||R ? {1'b0, _func} : B ? {1'b1, func} : CSR && f010 ? OR : ADD;
+    assign alu_ctrl = I||R ? {1'b0, func} : B ? {1'b1, func} : CSR && f010 ? OR : ADD;
     assign wmask = S ? (f000 ? 4'b0001 : f001 ? 4'b0011 : 4'b1111) : 0;
-    assign lr = R && imm[5] == 1 || I && imm[10] == 1;
-    assign upc = JAL || B ? _pc + imm : JALR ? (_src1 + imm)&~1 : 0;
+    assign is_arch = R && imm[5] == 1 || I && imm[10] == 1;
+    wire [31:0] a = JAL | B ? pc : src1;
+    wire [31:0] pc_or_lsu_addr = a + imm;
+    assign upc = JAL || B ? pc_or_lsu_addr : JALR ? pc_or_lsu_addr&~1 : 0;
+    assign need_lsu = L | S;
+    assign lsu_addr = pc_or_lsu_addr;
     /*
     always@(*)begin
         sub = 0;
