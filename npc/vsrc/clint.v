@@ -1,5 +1,5 @@
 module ysyx_20020207_CLINT(
-  input clk, rst, high,
+  input clock, reset, high,
   input reg arvalid, rready,
   input[31:0] araddr,
   output reg arready, rvalid,
@@ -9,8 +9,8 @@ module ysyx_20020207_CLINT(
 
 reg [63:0] mtime;
 
-always@(posedge clk) begin
-  if(rst)begin
+always@(posedge clock) begin
+  if(reset)begin
     mtime <= 0;
   end
   else begin
@@ -22,8 +22,8 @@ reg[31:0] _raddr;
 
 reg need_read;
 //araddr
-always@(posedge clk)begin
-  if(rst) begin
+always@(posedge clock)begin
+  if(reset) begin
     arready <= 0;
     _raddr <= 0;
     need_read <= 0;
@@ -41,8 +41,8 @@ always@(posedge clk)begin
   end
 end
 //rdata
-always@(posedge clk)begin
-  if(rst)begin
+always@(posedge clock)begin
+  if(reset)begin
     rdata <= 0;
     rvalid <= 0;
   end

@@ -3,7 +3,7 @@ module ysyx_20020207_PC #(
 ) (
     input clock,
     input reset,
-    output out_valid,
+    output reg out_valid,
 `ifdef CONFIG_PIPELINE
     input out_ready,
 `else
@@ -23,7 +23,7 @@ module ysyx_20020207_PC #(
     if (reset | out_valid && out_ready) out_valid <= 0;
     else if (!out_valid | after_rst) out_valid <= 1;
   end
-  always @(posedge clk) begin
+  always @(posedge clock) begin
     if (reset) begin
       //`ifdef CONFIG_YSYXSOC
       pc <= 32'h30000000;
@@ -41,7 +41,7 @@ module ysyx_20020207_PC #(
     else out_valid <= 0;
   end
 
-  always @(posedge clk) begin
+  always @(posedge clock) begin
     if (reset) begin
       //`ifdef CONFIG_YSYXSOC
       pc <= 32'h30000000;

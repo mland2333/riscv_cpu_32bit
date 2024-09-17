@@ -5,10 +5,10 @@ module ysyx_20020207_IDU (
     input [31:0] pc_in,
     output [31:0] pc_out,
     input in_valid,
-    output out_valid,
+    output reg out_valid,
 `ifdef CONFIG_PIPELINE
     input out_ready,
-    output in_ready,
+    output reg in_ready,
 `endif
     output [6:0] op,
     output [2:0] func,
@@ -37,6 +37,9 @@ module ysyx_20020207_IDU (
     if (reset) inst <= 0;
     else if (in_valid && in_ready) inst <= inst_in;
   end
+  always @(posedge clock) begin
+    if (in_valid && in_ready) pc <= pc_in;
+  end
 `else
   always @(posedge clock) begin
     if (reset) inst <= 0;
@@ -47,13 +50,12 @@ module ysyx_20020207_IDU (
     else if (in_valid) out_valid <= 1;
     else out_valid <= 0;
   end
-
+  always @(posedge clock) begin
+    if (in_valid) pc <= pc_in;
+  end
 `endif
 
-  always @(posedge clock) begin
-    if (in_valid && in_ready) pc <= 0;
-    else pc <= pc_in;
-  end
+  
   assign pc_out = pc;
 
   assign op = inst[6:0];
@@ -68,7 +70,7 @@ module ysyx_20020207_IDU (
   wire [31:0] ji = {{11{inst[31]}}, inst[31], inst[19:12], inst[20], inst[30:21], 1'b0};
   wire [31:0] si = {{20{inst[31]}}, inst[31:25], inst[11:7]};
   wire [31:0] bi = {{19{inst[31]}}, inst[31], inst[7], inst[30:25], inst[11:8], 1'b0};
-  wire [31:0] ri = {25'b0, _inst[31:25]};
+  wire [31:0] ri = {25'b0, inst[31:25]};
 
   wire is_i = inst[6:0] == 7'b0000011 || inst[6:0] == 7'b0010011
             ||  inst[6:0] == 7'b1100111 || inst[6:0] == 7'b1110011;

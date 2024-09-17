@@ -3,13 +3,18 @@ module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     input reset,
     input [6:0] op_in,
     input [2:0] func_in,
-    input [DATA_WIDTH-1:0]src1_in, src2_in, imm_in, pc_in, csr_rdata_in,
+    input [DATA_WIDTH-1:0]src1_in, src2_in, imm_in, csr_rdata_in,
     input in_valid,
-    output out_valid,
+    output reg out_valid,
   `ifdef CONFIG_PIPELINE
     input out_ready,
-    output in_ready,
+    output reg in_ready,
   `endif
+    input [31:0] pc_in,
+    output [31:0] pc_out,
+    input [4:0] rd_in,
+    output [4:0] rd_out,
+    output [11:0] imm_out,
     output [DATA_WIDTH-1:0]upc, alu_a, alu_b,
     output [31:0] lsu_addr,
     output reg_wen,
@@ -22,13 +27,14 @@ module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     output [2:0] load_ctrl,
     output fencei,
     output is_arch,
+    output is_branch,
     output need_lsu
 );
 
 reg[6:0] op;
 reg[2:0] func;
 reg[31:0] imm, pc, src1, src2, csr_rdata;
-
+reg[4:0] rd;
 `ifdef CONFIG_PIPELINE
 always@(posedge clock)begin
   if(reset) in_ready <= 1;
@@ -63,13 +69,14 @@ end
 always@(posedge clock)begin
   if(in_valid && in_ready) csr_rdata <= csr_rdata_in;
 end
-
+always@(posedge clock)begin
+  if(in_valid && in_ready) rd <= rd_in;
+end
 `else
 
 always@(posedge clock)begin
   if(reset)begin
     {op, func, imm, pc, src1, src2, csr_rdata} <= 0;
-    ctrl_valid <= 0;
   end
   else begin
     if(in_valid)begin
@@ -81,6 +88,7 @@ always@(posedge clock)begin
       src2 <= src2_in;
       csr_rdata <= csr_rdata_in;
       out_valid <= 1;
+      rd <= rd_in;
     end
     else if(out_valid)
       out_valid <= 0;
@@ -143,6 +151,7 @@ end
     assign mem_wen = S;
     assign mem_ren = L;
     assign jump = JAL || JALR || CSR && f000;
+    assign is_branch = B;
     assign upc_ctrl = CSR && f000;
     assign load_ctrl = L ? func : 0;
     assign fencei = FENCEI;
@@ -156,6 +165,9 @@ end
     assign upc = JAL || B ? pc_or_lsu_addr : JALR ? pc_or_lsu_addr&~1 : 0;
     assign need_lsu = L | S;
     assign lsu_addr = pc_or_lsu_addr;
+    assign pc_out = pc;
+    assign imm_out = imm[11:0];
+    assign rd_out = rd;
     /*
     always@(*)begin
         sub = 0;

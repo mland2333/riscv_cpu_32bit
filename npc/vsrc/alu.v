@@ -32,9 +32,9 @@ module Shift_32bit (
 endmodule
 
 module Logic_32bit (
-    input [31:0] a,
-    input [31:0] b,
-    input [1:0] logic_ctrl,
+    input  [31:0] a,
+    input  [31:0] b,
+    input  [ 1:0] logic_ctrl,
     output [31:0] logic_result
 );
   localparam XOR = 2'b00;
@@ -57,15 +57,11 @@ module ysyx_20020207_ALU (
     input [3:0] ctrl_in,
     input sub_in,
     input sign_in,
-    input reg_wen_in,
-    input reg_addr_in,
-    output reg_wen_out,
-    output reg_addr_out,
     input in_valid,
-    output out_valid,
+    output reg out_valid,
 `ifdef CONFIG_PIPELINE
     input out_ready,
-    output in_ready,
+    output reg in_ready,
 `endif
     output [31:0] result,
     output ZF,
@@ -130,8 +126,7 @@ module ysyx_20020207_ALU (
   reg sub, sign;
   reg [3:0] ctrl;
   reg [1:0] shift_ctrl, logic_ctrl, op_ctrl;
-  reg reg_wen;
-  reg [4:0] reg_addr;
+  wire valid;
 `ifdef CONFIG_PIPELINE
   always @(posedge clock) begin
     if (reset) in_ready <= 1;
@@ -143,74 +138,47 @@ module ysyx_20020207_ALU (
     else if (!in_ready && inst_valid) out_valid <= 1;
     else if (out_valid && out_ready) out_valid <= 0;
   end
-
-  always@(posedge clock)begin
-    if(in_valid && in_ready) r <= a_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid && in_ready) ctrl <= ctrl_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid && in_ready) sub <= sub_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid && in_ready) sign <= sign_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid && in_ready) l <= sub_in ? ~b_in : b_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid && in_ready) is_arch <= is_arch_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid && in_ready) reg_wen <= reg_wen_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid && in_ready) reg_addr <= reg_addr_in;
-  end
- `else
-  //wire sub;
-  always@(posedge clock)begin
-    if(in_valid) r <= a_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid) ctrl <= ctrl_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid) sub <= sub_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid) sign <= sign_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid) l <= sub_in ? ~b_in : b_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid) is_arch <= is_arch_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid) reg_wen <= reg_wen_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid) reg_addr <= reg_addr_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid) out_valid <= 1;
+  assign valid = in_valid && in_ready;
+`else
+  always @(posedge clock) begin
+    if (in_valid) out_valid <= 1;
     else out_valid <= 0;
+  end
+  assign valid = in_valid;
 `endif
+  always @(posedge clock) begin
+    if (valid) r <= a_in;
+  end
+  always @(posedge clock) begin
+    if (valid) ctrl <= ctrl_in;
+  end
+  always @(posedge clock) begin
+    if (valid) sub <= sub_in;
+  end
+  always @(posedge clock) begin
+    if (valid) sign <= sign_in;
+  end
+  always @(posedge clock) begin
+    if (valid) l <= sub_in ? ~b_in : b_in;
+  end
+  always @(posedge clock) begin
+    if (valid) is_arch <= is_arch_in;
+  end
+
   assign branch = is_beq && ZF || is_bne && ~ZF || is_blt && cmp || is_bge && ~cmp;
   assign op_ctrl = is_xor || is_or || is_and ? LOGIC : 
                      is_sll || is_srl || is_sra ? SHIFT :
                      is_beq || is_bne || is_blt || is_bge || is_slti || is_sltiu ? CMP : ADDER;
   assign logic_ctrl = ctrl[1:0];
   assign shift_ctrl = is_srl ? 2'b10 : is_sra ? 2'b01 : 2'b00;
-  assign reg_addr_out = reg_addr;
-  assign reg_wen_out = reg_wen;
+
+  wire [31:0] adder_result;
+  assign results[ADDER] = adder_result;
   Adder_32bit Adder (
       .a(l),
       .b(r),
       .cin(sub),
-      .result(results[ADDER]),
+      .result(adder_result),
       .cout(CF)
   );
   Shift_32bit Shift (
@@ -225,9 +193,9 @@ module ysyx_20020207_ALU (
       .logic_ctrl(logic_ctrl),
       .logic_result(results[LOGIC])
   );
-  assign ZF = ~(|results[ADDER]);
-  assign OF = l[31] == r[31] && l[31] != results[ADDER][31];
-  wire high = results[ADDER][31];
+  assign ZF = ~(|adder_result);
+  assign OF = l[31] == r[31] && l[31] != adder_result[31];
+  wire high = adder_result[31];
   wire cmp = sign ? OF ^ high : ~CF;
   /*wire cmp, high;
     assign cmp = sign ? OF ^ high : ~CF;*/

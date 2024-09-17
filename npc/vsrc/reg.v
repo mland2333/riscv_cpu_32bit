@@ -13,7 +13,7 @@ module ysyx_20020207_RegisterFile #(
     input wen
 );
   reg [DATA_WIDTH-1:0] rf[2**ADDR_WIDTH-1:0];
-  always @(posedge clk) begin
+  always @(posedge clock) begin
     if (in_valid && wen && waddr != 0) rf[waddr] <= wdata;
   end
   assign rf[0]  = 0;

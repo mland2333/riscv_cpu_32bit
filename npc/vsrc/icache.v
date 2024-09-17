@@ -12,7 +12,7 @@ module ICACHE #(
   input clock,
   input require,
   input[31:0] pc,
-  input fencei, ctrl_valid,
+  input fencei,
   output reg inst_valid,
   output reg [31:0] inst,
   input rvalid, arready,
@@ -179,7 +179,7 @@ always@(posedge clock)begin
       icache[index][VALID] <= 1;
       icache[index][`ICACHE_TAG] <= tag;
     end
-    else if(ctrl_valid && fencei)begin
+    else if(fencei)begin
       for(i=0; i<ICACHE_NUMS; i++)begin
         icache[i][VALID] <= 0;
       end

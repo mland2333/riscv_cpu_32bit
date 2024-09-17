@@ -98,20 +98,19 @@ module ysyx_20020207 #(
     `endif
   `endif*/
 
-  reg  pc_wen;
-  wire pc_valid;
+  reg pc_wen;
   ysyx_20020207_PC #(DATA_WIDTH) mpc (
-      .clk(clock),
-      .rst(reset),
+      .clock(clock),
+      .reset(reset),
       .out_valid(pc_valid),
 `ifdef CONFIG_PIPELINE
       .out_ready(ifu_ready),
 `else
-      .wen(pc_wen),
+      .wen(alu_valid | lsu_valid),
 `endif
-      .upc(upc),
-      .jump(jump),
-      .pc(pc),
+      .upc(alu_upc),
+      .jump(alu_jump | branch&alu_is_branch),
+      .pc(pc)
   );
 
   reg diff;
@@ -121,7 +120,7 @@ module ysyx_20020207 #(
   end
 
   always @(posedge clock) begin
-    if (lsu_valid) pc_wen <= 1;
+    if (lsu_valid | alu_valid) pc_wen <= 1;
     else pc_wen <= 0;
   end
 
@@ -197,19 +196,17 @@ module ysyx_20020207 #(
       .inst_in(inst),
       .pc_in(ifu_pc),
       .pc_out(idu_pc),
-      .inst(inst),
       .op(op),
       .func(func),
       .rs1(rs1),
       .rs2(rs2),
       .rd(idu_rd),
-      .imm(imm),
+      .imm(imm)
   );
 
-  wire [DATA_WIDTH-1 : 0] src1, src2, reg_wdata;
-  wire reg_wen;
+  wire [DATA_WIDTH-1 : 0] src1, src2;
   ysyx_20020207_RegisterFile #(4, DATA_WIDTH) mreg (
-      .clk(clock),
+      .clock(clock),
       .in_valid(reg_wdata_valid),
       .rdata1(src1),
       .raddr1(rs1[3:0]),
@@ -222,22 +219,26 @@ module ysyx_20020207 #(
   wire reg_ready = 1;
   wire reg_wdata_valid = lsu_valid | alu_valid;
   wire [31:0] reg_wdata = lsu_valid ? mem_rdata : alu_result;
-  wire reg_waddr = lsu_valid ? lsu_rd : alu_rd;
-  wire reg_wen = lsu_valid ? lsu_reg_wen : alu_reg_wen;
-  wire exu_reg_wen, lsu_reg_wen;
+  wire [4:0] reg_waddr = alu_rd;
+  wire reg_wen = alu_reg_wen;
+  wire exu_reg_wen, alu_reg_wen;
   wire [31:0] csr_rdata, csr_wdata;
   wire upc_ctrl;
-  reg csr_wen;
-  wire [2:0] csr_ctrl;
-  reg [31:0] exu_upc, csr_upc;
+  reg exu_csr_wen, alu_csr_wen, csr_wen;
+  wire [2:0] exu_csr_ctrl, alu_csr_ctrl;
+  wire [31:0] exu_upc, csr_upc, alu_upc;
+  wire [31:0] exu_pc, alu_pc;
   wire [31:0] alu_a, alu_b;
   wire [3:0] wmask;
   wire [3:0] alu_ctrl;
   wire [1:0] result_ctrl;
-  wire mem_ren, alu_sub, alu_sign, exu_jump;
+  wire mem_ren, alu_sub, alu_sign, exu_jump, alu_jump;
   wire [31:0] alu_result;
   wire [ 2:0] load_ctrl;
   wire fencei, is_arch;
+  wire [11:0] exu_imm, alu_imm;
+  wire need_lsu;
+  wire is_branch, alu_is_branch;
   ysyx_20020207_EXU #(DATA_WIDTH) mexu (
       .clock(clock),
       .reset(reset),
@@ -247,15 +248,17 @@ module ysyx_20020207 #(
       .in_ready(exu_ready),
       .out_ready(alu_lsu_ready),
 `endif
-      .op(op),
-      .func(func),
-      .src1(src1),
-      .src2(src2),
+      .op_in(op),
+      .func_in(func),
+      .src1_in(src1),
+      .src2_in(src2),
       .rd_in(idu_rd),
       .rd_out(exu_rd),
-      .imm(imm),
-      .pc(idu_pc),
-      .csr_rdata(csr_rdata),
+      .imm_in(imm),
+      .pc_in(idu_pc),
+      .pc_out(exu_pc),
+      .imm_out(exu_imm),
+      .csr_rdata_in(csr_rdata),
       .upc(exu_upc),
       .alu_a(alu_a),
       .alu_b(alu_b),
@@ -263,8 +266,8 @@ module ysyx_20020207 #(
       .jump(exu_jump),
       .mem_wen(mem_wen),
       .mem_ren(mem_ren),
-      .csr_wen(csr_wen),
-      .csr_ctrl(csr_ctrl),
+      .csr_wen(exu_csr_wen),
+      .csr_ctrl(exu_csr_ctrl),
       .alu_ctrl(alu_ctrl),
       .result_ctrl(result_ctrl),
       .upc_ctrl(upc_ctrl),
@@ -272,24 +275,47 @@ module ysyx_20020207 #(
       .sign(alu_sign),
       .wmask(wmask),
       .load_ctrl(load_ctrl),
+      .lsu_addr(lsu_addr),
+      .need_lsu(need_lsu),
       .fencei(fencei),
-      .is_arch(is_arch),
+      .is_branch(is_branch),
+      .is_arch(is_arch)
   );
-  wire alu_valid;
-  wire ZF, OF, CF, branch;
-  wire [31:0] lsu_addr;
-  ysyx_20020207_ALU malu (
+  ysyx_20020207_EXUCTRL mexuctrl (
       .clock(clock),
-      .in_valid(exu_valid & !is_lsu),
-      .out_valid(alu_valid),
+      .in_valid(exu_valid),
 `ifdef CONFIG_PIPELINE
-      .in_ready(alu_ready),
-      .out_ready(reg_ready),
+      .in_ready(alu_lsu_ready),
 `endif
       .reg_wen_in(exu_reg_wen),
       .reg_addr_in(exu_rd),
       .reg_wen_out(alu_reg_wen),
       .reg_addr_out(alu_rd),
+      .csr_wen_in(exu_csr_wen),
+      .csr_wen_out(alu_csr_wen),
+      .csr_ctrl_in(exu_csr_ctrl),
+      .csr_ctrl_out(alu_csr_ctrl),
+      .pc_in(exu_pc),
+      .pc_out(alu_pc),
+      .imm_in(exu_imm),
+      .imm_out(alu_imm),
+      .upc_in(exu_upc),
+      .upc_out(alu_upc),
+      .jump_in(exu_jump),
+      .jump_out(alu_jump),
+      .is_branch_in(is_branch),
+      .is_branch_out(alu_is_branch)
+  );
+  wire ZF, OF, CF, branch;
+  wire [31:0] lsu_addr;
+  ysyx_20020207_ALU malu (
+      .clock(clock),
+      .in_valid(exu_valid & !need_lsu),
+      .out_valid(alu_valid),
+`ifdef CONFIG_PIPELINE
+      .in_ready(alu_ready),
+      .out_ready(1),
+`endif
       .is_arch_in(is_arch),
       .a_in(alu_a),
       .b_in(alu_b),
@@ -303,15 +329,12 @@ module ysyx_20020207 #(
       .branch(branch)
   );
   reg [31:0] mem_rdata, mem_wdata;
-  wire [31:0] mem_raddr, mem_waddr;
   wire lsu_arvalid, lsu_rready, lsu_awvalid, lsu_wvalid, lsu_bready, lsu_wready;
   wire lsu_rvalid, lsu_bvalid, lsu_awready, lsu_arready;
   wire [31:0] lsu_araddr, lsu_awaddr;
   wire [31:0] lsu_wdata, lsu_rdata;
   wire [3:0] lsu_wstrb;
   wire [1:0] lsu_rresp, lsu_bresp, rresp, bresp;
-  assign mem_raddr = lsu_addr;
-  assign mem_waddr = lsu_addr;
   assign mem_wdata = src2;
   ysyx_20020207_LSU mlsu (
       .clock(clock),
@@ -320,20 +343,15 @@ module ysyx_20020207 #(
       .out_valid(lsu_valid),
 `ifdef CONFIG_PIPELINE
       .in_ready(lsu_ready),
-      .out_ready(reg_ready),
+      .out_ready(1),
 `endif
-      .reg_wen_in(exu_reg_wen),
-      .reg_addr_in(exu_rd),
-      .reg_wen_out(lsu_reg_wen),
-      .reg_addr_out(lsu_rd),
-      .raddr(mem_raddr),
-      .waddr(mem_waddr),
-      .wdata(mem_wdata),
-      .ren(mem_ren),
-      .wen(mem_wen),
-      .wmask(wmask),
+      .addr(lsu_addr),
+      .wdata_in(mem_wdata),
+      .ren_in(mem_ren),
+      .wen_in(mem_wen),
+      .wmask_in(wmask),
       .rdata(mem_rdata),
-      .load_ctrl(load_ctrl),
+      .load_ctrl_in(load_ctrl),
       .io_master_rvalid(lsu_rvalid),
       .io_master_arready(lsu_arready),
       .io_master_awready(lsu_awready),
@@ -569,8 +587,8 @@ module ysyx_20020207 #(
 `endif
 */
   ysyx_20020207_CLINT mclint (
-      .clk(clock),
-      .rst(reset),
+      .clock(clock),
+      .reset(reset),
       .arvalid(clint_arvalid),
       .rready(clint_rready),
       .araddr(clint_araddr),
@@ -581,43 +599,95 @@ module ysyx_20020207 #(
       .high(clint_high)
   );
 
-  wire [11:0] csr_addr;
-  assign csr_addr = imm[11:0];
-
   ysyx_20020207_CSRU mcsr (
       .clock(clock),
-      .wen(csr_wen),
-      .decode_valid(decode_valid),
-      .ctrl_valid(ctrl_valid),
-      .csr_ctrl(csr_ctrl),
-      .csr_addr(csr_addr),
-      .wdata(csr_wdata),
-      .pc(pc),
-      .lsu_ready(lsu_finish),
+      .in_valid(alu_valid),
+      .wen(alu_csr_wen),
+      .ctrl(alu_csr_ctrl),
+      .raddr(imm[11:0]),
+      .waddr(alu_imm),
+      .wdata(alu_result),
+      .pc(alu_pc),
       .rdata(csr_rdata),
       .upc(csr_upc)
   );
-  reg alu_jump;
-  reg _exu_jump;
-  always @(posedge clock) begin
-    if (reset) alu_jump <= 0;
-    else alu_jump <= branch;
-  end
-  always @(posedge clock) begin
-    if (reset) _exu_jump <= 0;
-    else _exu_jump <= exu_jump;
-  end
-
-  assign jump = _exu_jump | alu_jump;
-  assign csr_wdata = alu_result;
-  assign result = result_ctrl == 2'b0 ? alu_result : (result_ctrl == 2'b01 ? mem_rdata : csr_rdata);
-  assign reg_wdata = result;
-  reg [31:0] _exu_upc;
-  always @(posedge clock) begin
-    if (exu_valid) _exu_upc <= exu_upc;
-  end
-  always @(*) begin
-    if (upc_ctrl == 0) upc = _exu_upc;
-    else upc = csr_upc;
-  end
 endmodule
+
+module ysyx_20020207_EXUCTRL (
+    input clock,
+    input in_valid,
+`ifdef CONFIG_PIPELINE
+    input in_ready,
+`endif
+    input csr_wen_in,
+    input [2:0] csr_ctrl_in,
+    input reg_wen_in,
+    input [4:0] reg_addr_in,
+    output csr_wen_out,
+    output [2:0] csr_ctrl_out,
+    output reg_wen_out,
+    output [4:0] reg_addr_out,
+    input [31:0] pc_in,
+    output [31:0] pc_out,
+    input [11:0] imm_in,
+    output [11:0] imm_out,
+    input [31:0] upc_in,
+    output [31:0] upc_out,
+    input jump_in,
+    output jump_out,
+    input is_branch_in,
+    output is_branch_out
+);
+
+`ifdef CONFIG_PIPELINE
+  wire valid = in_valid & in_ready;
+`else
+  wire valid = in_valid;
+`endif
+  reg reg_wen;
+  reg csr_wen;
+  reg [4:0] reg_addr;
+  reg [2:0] csr_ctrl;
+  reg [31:0] pc;
+  reg [11:0] imm;
+  reg [31:0] upc;
+  reg jump;
+  reg is_branch;
+  always @(posedge clock) begin
+    if (valid) reg_wen <= reg_wen_in;
+  end
+  always @(posedge clock) begin
+    if (valid) reg_addr <= reg_addr_in;
+  end
+  always @(posedge clock) begin
+    if (valid) csr_wen <= csr_wen_in;
+  end
+  always @(posedge clock) begin
+    if (valid) csr_ctrl <= csr_ctrl_in;
+  end
+  always @(posedge clock) begin
+    if (valid) pc <= pc_in;
+  end
+  always @(posedge clock) begin
+    if (valid) imm <= imm_in;
+  end
+  always @(posedge clock) begin
+    if (valid) upc <= upc_in;
+  end
+  always @(posedge clock) begin
+    if (valid) jump <= jump_in;
+  end
+ always @(posedge clock) begin
+    if (valid) is_branch <= is_branch_in;
+  end
+  assign reg_addr_out = reg_addr;
+  assign reg_wen_out = reg_wen;
+  assign csr_wen_out = csr_wen;
+  assign csr_ctrl_out = csr_ctrl;
+  assign imm_out = imm;
+  assign pc_out = pc;
+  assign upc_out = upc;
+  assign jump_out = jump;
+  assign is_branch_out = is_branch;
+endmodule
+

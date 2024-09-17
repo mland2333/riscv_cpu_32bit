@@ -2,6 +2,12 @@
 module ysyx_20020207_LSU (
     input clock,
     input reset,
+    input  in_valid,
+    output reg out_valid,
+`ifdef CONFIG_PIPELINE
+    input  out_ready,
+    output reg in_ready,
+`endif
     input [31:0] addr,
     input [31:0] wdata_in,
     input ren_in,
@@ -9,17 +15,6 @@ module ysyx_20020207_LSU (
     input [3:0] wmask_in,
     input [2:0] load_ctrl_in,
     output reg [31:0] rdata,
-    input reg_wen_in,
-    input reg_addr_in,
-    output reg_wen_out,
-    output reg_addr_out,
-    input  in_valid,
-    output out_valid,
-`ifdef CONFIG_PIPELINE
-    input  out_ready,
-    output in_ready,
-`endif
-
     input io_master_awready,
     output io_master_awvalid,
     output [31:0] io_master_awaddr,
@@ -58,82 +53,46 @@ module ysyx_20020207_LSU (
   reg wen, ren;
   reg [3:0] wmask;
   reg [2:0] load_ctrl;
-  reg reg_wen;
-  reg[4:0] reg_addr;
+  wire valid;
+  always@(posedge clock)begin
+    if(lsu_finish && !out_valid) out_valid <= 1;
+    else if(out_valid) out_valid <= 0;
+  end
 `ifdef CONFIG_PIPELINE
   always @(posedge clock) begin
     if (reset) in_ready <= 1;
     else if (in_valid && in_ready) in_ready <= 0;
     else if (!in_ready && out_valid && out_ready) in_ready <= 1;
   end
-
-  always @(posedge clock) begin
-    if (reset) out_valid <= 0;
-    else if (!in_ready && lsu_finish) out_valid <= 1;
-    else if (out_valid && out_ready) out_valid <= 0;
-  end
-
-  always @(posedge clock) begin
-    if (in_valid && in_ready) waddr <= addr;
-  end
-  always @(posedge clock) begin
-    if (in_valid && in_ready) raddr <= addr;
-  end
-  always @(posedge clock) begin
-    if (in_valid && in_ready) wen <= wen_in;
-    else if (lsu_finish) wen <= 0;
-  end
-  always @(posedge clock) begin
-    if (in_valid && in_ready) ren <= ren_in;
-    else if (lsu_finish) ren <= 0;
-  end
-  always @(posedge clock) begin
-    if (in_valid && in_ready) wmask <= wmask_in;
-  end
-  always @(posedge clock) begin
-    if (in_valid && in_ready) load_ctrl <= load_ctrl_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid && in_ready) reg_wen <= reg_wen_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid && in_ready) reg_addr <= reg_addr_in;
-  end
+  assign valid = in_valid & in_ready;
 `else
+  assign valid = in_valid;
+`endif
+
   always @(posedge clock) begin
-    if (in_valid) waddr <= addr;
+    if (valid) waddr <= addr;
   end
   always @(posedge clock) begin
-    if (in_valid) raddr <= addr;
+    if (valid) raddr <= addr;
   end
   always @(posedge clock) begin
-    if (in_valid) wen <= wen_in;
+    if (valid) wen <= wen_in;
     else if (lsu_finish) wen <= 0;
   end
   always @(posedge clock) begin
-    if (in_valid) ren <= ren_in;
+    if (valid) ren <= ren_in;
     else if (lsu_finish) ren <= 0;
   end
   always @(posedge clock) begin
-    if (in_valid) wmask <= wmask_in;
+    if (valid) wmask <= wmask_in;
   end
   always @(posedge clock) begin
-    if (in_valid) load_ctrl <= load_ctrl_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid) reg_wen <= reg_wen_in;
-  end
-  always@(posedge clock)begin
-    if(in_valid) reg_addr <= reg_addr_in;
+    if (valid) wdata <= wdata_in;
   end
   always @(posedge clock) begin
-    if (reset) out_valid <= 0;
-    else if (lsu_finish) out_valid <= 1;
-    else if (out_valid) out_valid <= 0;
+    if (valid) load_ctrl <= load_ctrl_in;
   end
-`endif
-  assign reg_addr_out = reg_addr;
-  assign reg_wen_out = reg_wen;
+
   localparam IDLE = 2'b00;
   localparam TRAN1 = 2'b01;
   localparam TRAN2 = 2'b10;
