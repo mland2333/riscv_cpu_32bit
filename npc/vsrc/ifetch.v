@@ -10,6 +10,7 @@ module ysyx_20020207_IFU (
 `ifdef CONFIG_PIPELINE
     input out_ready,
     output reg in_ready,
+    input jump,
 `endif
     input io_master_arready,
     output io_master_arvalid,
@@ -34,27 +35,32 @@ module ysyx_20020207_IFU (
   assign pc_out = pc;
   wire inst_valid;
 `ifdef CONFIG_PIPELINE
-
+  reg refresh;
+  always @(posedge clock) begin
+    if (reset) refresh <= 0;
+    else if (jump) refresh <= 1;
+    else if (inst_valid) refresh <= 0;
+  end
   always @(posedge clock) begin
     if (reset) in_ready <= 1;
     else if (in_valid && in_ready) in_ready <= 0;
-    else if (!in_ready && out_valid && out_ready) in_ready <= 1;
+    else if (!in_ready && inst_valid && out_ready) in_ready <= 1;
   end
 
   always @(posedge clock) begin
     if (reset) pc <= 0;
     else if (in_valid && in_ready) pc <= pc_in;
   end
-
+  assign out_valid = !refresh && inst_valid;
   wire inst_require = in_valid && in_ready;
 `else
 
   always @(posedge clock) begin
     if (in_valid) pc <= pc_in;
   end
-    wire inst_require = in_valid;
-`endif
+  wire inst_require = in_valid;
   assign out_valid = inst_valid;
+`endif
 
   /*always@(posedge clock)begin
   if(inst_valid)begin
@@ -111,6 +117,9 @@ end
       .require(inst_require),
       .pc(pc_in),
       .fencei(fencei),
+`ifdef CONFIG_PIPELINE
+      .out_ready(out_ready),
+`endif
       .inst_valid(inst_valid),
       .inst(inst),
       .arvalid(io_master_arvalid),

@@ -7,6 +7,7 @@ module ysyx_20020207_LSU (
 `ifdef CONFIG_PIPELINE
     input  out_ready,
     output reg in_ready,
+    input jump,
 `endif
     input [31:0] addr,
     input [31:0] wdata_in,
@@ -54,19 +55,27 @@ module ysyx_20020207_LSU (
   reg [3:0] wmask;
   reg [2:0] load_ctrl;
   wire valid;
+ 
+`ifdef CONFIG_PIPELINE
   always@(posedge clock)begin
+    if(reset || jump) out_valid <= 0;
     if(lsu_finish && !out_valid) out_valid <= 1;
     else if(out_valid) out_valid <= 0;
   end
-`ifdef CONFIG_PIPELINE
+
   always @(posedge clock) begin
-    if (reset) in_ready <= 1;
+    if (reset || jump) in_ready <= 1;
     else if (in_valid && in_ready) in_ready <= 0;
     else if (!in_ready && out_valid && out_ready) in_ready <= 1;
   end
   assign valid = in_valid & in_ready;
 `else
   assign valid = in_valid;
+  always@(posedge clock)begin
+    if(reset) out_valid <= 0;
+    if(lsu_finish && !out_valid) out_valid <= 1;
+    else if(out_valid) out_valid <= 0;
+  end
 `endif
 
   always @(posedge clock) begin

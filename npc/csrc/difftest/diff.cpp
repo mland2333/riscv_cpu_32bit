@@ -37,9 +37,11 @@ void init_difftest(char *ref_so_file, long img_size, int port)
 #ifdef CONFIG_YSYXSOC
   extern char* flash;
   difftest_memcpy(0x30000000, (void*)flash, img_size, DIFFTEST_TO_REF);
+  cpu.pc = 0x30000000;
 #else
   extern void* mem;
   difftest_memcpy(0x80000000, mem, img_size, DIFFTEST_TO_REF);
+  cpu.pc = 0x80000000;
 #endif
   difftest_regcpy(&cpu, DIFFTEST_TO_REF);
 }

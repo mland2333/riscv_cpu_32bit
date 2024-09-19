@@ -6,6 +6,7 @@ module ysyx_20020207_PC #(
     output reg out_valid,
 `ifdef CONFIG_PIPELINE
     input out_ready,
+    output refresh,
 `else
     input wen,
 `endif
@@ -20,7 +21,7 @@ module ysyx_20020207_PC #(
   end
 `ifdef CONFIG_PIPELINE
   always @(posedge clock) begin
-    if (reset | out_valid && out_ready) out_valid <= 0;
+    if (reset | out_valid && out_ready | jump) out_valid <= 0;
     else if (!out_valid | after_rst) out_valid <= 1;
   end
   always @(posedge clock) begin
@@ -30,11 +31,14 @@ module ysyx_20020207_PC #(
       //`else
       //pc <= 32'h80000000;
       //`endif
-    end else if (out_valid && out_ready) begin
+    end
+    else if(jump)begin
+      pc <= upc;
+    end
+    else if (out_valid && out_ready) begin
       pc <= pc + 4;
     end
   end
-
 `else
   always @(posedge clock) begin
     if (wen | after_rst) out_valid <= 1;

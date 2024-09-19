@@ -178,9 +178,8 @@ void cpu_update() {
   for (int i = 0; i < 16; i++) {
     cpu.gpr[i] = (TOP_MEMBER(mreg__DOT__rf))[i];
   }
-  cpu.pc = TOP_MEMBER(pc);
+  cpu.pc = TOP_MEMBER(midu__DOT__pc);
 }
-
 void sim_init() {
   top = new TOP_NAME;
   assert(top != NULL);
@@ -236,7 +235,6 @@ bool perf_begin = false;
 int lsu_begin = 0;
 uint32_t inst;
 int exec_once() {
-
 #ifdef CONFIG_NVBOARD
   nvboard_update();
 #endif
@@ -249,7 +247,7 @@ int exec_once() {
     perf_begin = true;
   if (perf_begin) {
     perf.clk_nums++;
-    if (TOP_MEMBER(mifu__DOT___inst_valid)) {
+    if (TOP_MEMBER(mifu__DOT__inst_valid)) {
       perf.inst_nums++;
       int fetch_clk = perf.clk_nums - perf.clk_rev;
       /* if (fetch_clk != 9) */
@@ -258,7 +256,7 @@ int exec_once() {
       lsu_begin = perf.clk_nums;
     }
     if ((perf.inst_type == LOAD || perf.inst_type == STORE) &&
-        TOP_MEMBER(lsu_finish))
+        TOP_MEMBER(lsu_valid))
       perf.inst_clk[LSU] += perf.clk_nums - lsu_begin;
 
     if (TOP_MEMBER(pc_wen)) {
@@ -272,7 +270,7 @@ int exec_once() {
   step_and_dump_wave();
   mem_en = false;
   mem_wen = false;
-  pc = TOP_MEMBER(pc);
+  pc = TOP_MEMBER(mexuctrl__DOT__pc);
   inst = TOP_MEMBER(inst);
   top->clock = 0;
   step_and_dump_wave();
@@ -282,7 +280,7 @@ int exec_once() {
 #endif
 
 #ifdef CONFIG_ITRACE
-  if (TOP_MEMBER(lsu_finish)) {
+  if (TOP_MEMBER(inst_valid)) {
     disassemble(inst_buf, 128, (uint64_t)pc, (uint8_t *)(&inst), 4);
     // printf("%08x\n", inst);
     printf("0x%x\t0x%08x\t%s\t\n", TOP_MEMBER(pc), inst, inst_buf);
@@ -290,7 +288,7 @@ int exec_once() {
 #endif
 
 #ifdef CONFIG_FTRACE
-  if (TOP_MEMBER(lsu_finish))
+  if (TOP_MEMBER(inst_valid))
     ftrace(inst, pc, TOP_MEMBER(exu_upc));
 #endif
 
@@ -368,8 +366,8 @@ int run() {
   char *strend;
   std::string line;
 #ifdef CONFIG_DIFFTEST
-  extern bool npc_is_ref_skip;
-  npc_is_ref_skip = true;
+  /* extern bool npc_is_ref_skip; */
+  /* npc_is_ref_skip = true; */
 #endif
 #ifdef CONFIG_DEVICE
   extern void sdl_clear_event_queue();

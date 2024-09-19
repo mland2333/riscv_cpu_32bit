@@ -9,6 +9,7 @@ module ysyx_20020207_IDU (
 `ifdef CONFIG_PIPELINE
     input out_ready,
     output reg in_ready,
+    input jump,
 `endif
     output [6:0] op,
     output [2:0] func,
@@ -22,13 +23,13 @@ module ysyx_20020207_IDU (
   reg [31:0] pc;
 `ifdef CONFIG_PIPELINE
   always @(posedge clock) begin
-    if (reset) in_ready <= 1;
+    if (reset || jump) in_ready <= 1;
     else if (in_valid && in_ready) in_ready <= 0;
     else if (!in_ready && out_valid && out_ready) in_ready <= 1;
   end
 
   always @(posedge clock) begin
-    if (reset) out_valid <= 0;
+    if (reset || jump) out_valid <= 0;
     else if (in_valid && in_ready) out_valid <= 1;
     else if (out_valid && out_ready) out_valid <= 0;
   end

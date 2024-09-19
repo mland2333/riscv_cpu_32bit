@@ -4,11 +4,13 @@ module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     input [6:0] op_in,
     input [2:0] func_in,
     input [DATA_WIDTH-1:0]src1_in, src2_in, imm_in, csr_rdata_in,
+    input is_raw,
     input in_valid,
     output reg out_valid,
   `ifdef CONFIG_PIPELINE
     input out_ready,
     output reg in_ready,
+    input jump,
   `endif
     input [31:0] pc_in,
     output [31:0] pc_out,
@@ -18,7 +20,7 @@ module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     output [DATA_WIDTH-1:0]upc, alu_a, alu_b,
     output [31:0] lsu_addr,
     output reg_wen,
-    output jump, mem_wen, mem_ren, csr_wen,
+    output exu_jump, mem_wen, mem_ren, csr_wen,
     output [2:0] csr_ctrl,
     output [3:0] alu_ctrl,
     output [1:0] result_ctrl,
@@ -30,20 +32,19 @@ module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     output is_branch,
     output need_lsu
 );
-
 reg[6:0] op;
 reg[2:0] func;
 reg[31:0] imm, pc, src1, src2, csr_rdata;
 reg[4:0] rd;
 `ifdef CONFIG_PIPELINE
 always@(posedge clock)begin
-  if(reset) in_ready <= 1;
-  else if(in_valid && in_ready) in_ready <= 0;
-  else if(!in_ready && out_valid && out_ready) in_ready <= 1;
+  if(reset || jump) in_ready <= 1;
+  else if(is_raw || in_valid && in_ready) in_ready <= 0;
+  else if(!is_raw || !in_ready && out_valid && out_ready) in_ready <= 1;
 end
 
 always@(posedge clock)begin
-  if(reset) out_valid <= 0;
+  if(reset || jump) out_valid <= 0;
   else if(in_valid && in_ready) out_valid <= 1;
   else if(out_valid && out_ready) out_valid <= 0;
 end
@@ -150,7 +151,7 @@ end
     assign csr_wen = CSR;
     assign mem_wen = S;
     assign mem_ren = L;
-    assign jump = JAL || JALR || CSR && f000;
+    assign exu_jump = JAL || JALR || CSR && f000;
     assign is_branch = B;
     assign upc_ctrl = CSR && f000;
     assign load_ctrl = L ? func : 0;
