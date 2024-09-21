@@ -55,6 +55,39 @@ std::unordered_map<std::string, std::function<int(char *)>> sdb_map;
 CPU_status cpu;
 uint32_t pc;
 
+struct DiffData{
+  int pc, upc;
+  bool jump;
+  
+  int get(){
+    return jump ? upc : pc + 4;
+  }
+};
+
+template<int N>
+struct DiffPc{
+  DiffData diffdata[N];
+  int wd_pc = 0, wd_upc = 0, rd = 0;
+  void update(){
+    if(TOP_MEMBER(exu_valid) && TOP_MEMBER(lsu_ready)){
+      diffdata[wd_pc].pc = TOP_MEMBER(mexu__DOT__pc);
+      diffdata[wd_pc].jump = TOP_MEMBER(jump);
+      wd_pc = (wd_pc+1)%N;
+    }
+    if(TOP_MEMBER(diff)){
+      diffdata[wd_upc].upc = TOP_MEMBER(pc);
+      wd_upc = (wd_upc+1)%N;
+    }
+  }
+  int diff(){
+    int _pc = diffdata[rd].get();
+    rd = (rd+1)%N;
+    return _pc;
+  }
+};
+
+DiffPc<10> myDiffPc;
+
 enum {
   LOAD,
   STORE,
@@ -178,7 +211,13 @@ void cpu_update() {
   for (int i = 0; i < 16; i++) {
     cpu.gpr[i] = (TOP_MEMBER(mreg__DOT__rf))[i];
   }
-  cpu.pc = TOP_MEMBER(midu__DOT__pc);
+  cpu.pc = TOP_MEMBER(pc);
+}
+void cpu_update_diff() {
+  for (int i = 0; i < 16; i++) {
+    cpu.gpr[i] = (TOP_MEMBER(mreg__DOT__rf))[i];
+  }
+  cpu.pc = myDiffPc.diff();
 }
 void sim_init() {
   top = new TOP_NAME;
@@ -243,7 +282,7 @@ int exec_once() {
   if (trace_enable != 1)
     trace_enable = 1;
 #endif
-  if (pc >= PC_BEGIN && TOP_MEMBER(pc_wen))
+  if (pc >= PC_BEGIN)
     perf_begin = true;
   if (perf_begin) {
     perf.clk_nums++;
@@ -259,7 +298,7 @@ int exec_once() {
         TOP_MEMBER(lsu_valid))
       perf.inst_clk[LSU] += perf.clk_nums - lsu_begin;
 
-    if (TOP_MEMBER(pc_wen)) {
+    if (TOP_MEMBER(lsu_valid)) {
       perf.inst_clk[perf.inst_type] += perf.clk_nums - perf.clk_rev;
       perf.clk_rev = perf.clk_nums;
     }
@@ -270,7 +309,7 @@ int exec_once() {
   step_and_dump_wave();
   mem_en = false;
   mem_wen = false;
-  pc = TOP_MEMBER(mexuctrl__DOT__pc);
+  pc = TOP_MEMBER(mexu__DOT__pc);
   inst = TOP_MEMBER(inst);
   top->clock = 0;
   step_and_dump_wave();
@@ -289,12 +328,14 @@ int exec_once() {
 
 #ifdef CONFIG_FTRACE
   if (TOP_MEMBER(inst_valid))
-    ftrace(inst, pc, TOP_MEMBER(exu_upc));
+    ftrace(inst, pc, TOP_MEMBER(upc));
 #endif
 
 #ifdef CONFIG_DIFFTEST
   // printf("result=0x%x\n", top->result);
-  cpu_update();
+  myDiffPc.update();
+  if (TOP_MEMBER(diff))
+    cpu_update_diff();
   extern int difftest_step();
   extern bool npc_is_ref_skip;
   npc_is_ref_skip = npc_is_ref_skip ? 1 : TOP_MEMBER(is_diff_skip);

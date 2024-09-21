@@ -7,6 +7,7 @@
 #include <cstdint>
 CPU_status ref_cpu;
 extern CPU_status cpu;
+int diff_pc;
 enum { DIFFTEST_TO_DUT, DIFFTEST_TO_REF };
 void (*difftest_memcpy)(uint64_t addr, void *buf, size_t n, bool direction) = NULL;
 void (*difftest_regcpy)(void *dut, bool direction) = NULL;

@@ -16,7 +16,8 @@ module ysyx_20020207_IDU (
     output [4:0] rs1,
     output [4:0] rs2,
     output [4:0] rd,
-    output [31:0] imm
+    output [31:0] imm,
+    output reg_wen
 );
 
   reg [31:0] inst;
@@ -55,8 +56,6 @@ module ysyx_20020207_IDU (
     if (in_valid) pc <= pc_in;
   end
 `endif
-
-  
   assign pc_out = pc;
 
   assign op = inst[6:0];
@@ -64,7 +63,7 @@ module ysyx_20020207_IDU (
   assign rd = inst[11:7];
   assign rs1 = inst[19:15];
   assign rs2 = inst[24:20];
-
+  assign reg_wen = !(is_s || is_b);
   wire [31:0] luii = {inst[31:12], 12'b0};
   wire [31:0] auipci = {inst[31:12], 12'b0};
   wire [31:0] ii = {{20{inst[31]}}, inst[31:20]};
@@ -96,47 +95,4 @@ module ysyx_20020207_IDU (
   wire is_up = is_i | is_r | is_j | is_b;
   assign imm = is_up ? irjbi : sauipcluii;
 
-  /*
-    always@(*)begin
-        case(_inst[6:0])
-            7'b0110111: //lui
-            begin
-                i = {_inst[31:12], 12'b0};
-            end
-            7'b0010111: // auipc U
-            begin
-                i = {_inst[31:12], 12'b0};
-            end
-            7'b0000011,
-            7'b0010011,
-            7'b1100111,
-            7'b1110011: //I
-            begin
-                i = {{20{_inst[31]}}, _inst[31:20]};
-            end
-            7'b1101111: //J
-            begin
-                i = {{11{_inst[31]}}, _inst[31], _inst[19:12], _inst[20], _inst[30:21], 1'b0};
-            end
-            7'b0100011: //S
-            begin
-                i = {{20{_inst[31]}}, _inst[31:25], _inst[11:7]};
-            end
-            7'b1100011: //B
-            begin
-                i = {{19{_inst[31]}}, _inst[31], _inst[7], _inst[30:25], _inst[11:8], 1'b0};
-            end
-            7'b0110011: //R
-            begin
-                i = {25'b0, _inst[31:25]};
-              end
-            default:
-            begin
-                i = 32'b0;
-            end
-        endcase
-    end
-
-    assign imm = i;
-*/
 endmodule

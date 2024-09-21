@@ -50,21 +50,12 @@ module Logic_32bit (
 endmodule
 
 module ysyx_20020207_ALU (
-    input clock,
-    input reset,
-    input is_arch_in,
-    input [31:0] a_in,
-    input [31:0] b_in,
-    input [3:0] ctrl_in,
-    input sub_in,
-    input sign_in,
-    input in_valid,
-    output reg out_valid,
-`ifdef CONFIG_PIPELINE
-    input out_ready,
-    output reg in_ready,
-    input jump,
-`endif
+    input is_arch,
+    input [31:0] a,
+    input [31:0] b,
+    input [3:0] ctrl,
+    input sub,
+    input sign,
     output [31:0] result,
     output ZF,
     output OF,
@@ -106,7 +97,6 @@ module ysyx_20020207_ALU (
   localparam BLTU = 4'b1110;
   localparam BGEU = 4'b1111;
 
-  reg is_arch;
   wire is_add = ctrl == ADD;
   wire is_sll = ctrl == SLL;
   wire is_slti = ctrl == SLTI;
@@ -124,50 +114,8 @@ module ysyx_20020207_ALU (
 
 
   wire [31:0] results[4];
-  reg [31:0] l, r;
-  reg sub, sign;
-  reg [3:0] ctrl;
   reg [1:0] shift_ctrl, logic_ctrl, op_ctrl;
-  wire valid;
-`ifdef CONFIG_PIPELINE
-  always @(posedge clock) begin
-    if (reset || jump) in_ready <= 1;
-    else if (in_valid && in_ready) in_ready <= 0;
-    else if (!in_ready && out_valid && out_ready) in_ready <= 1;
-  end
-  always @(posedge clock) begin
-    if (reset || jump) out_valid <= 0;
-    else if (in_ready && in_valid) out_valid <= 1;
-    else if (out_valid && out_ready) out_valid <= 0;
-  end
-  assign valid = in_valid && in_ready;
-`else
-  always @(posedge clock) begin
-    if (in_valid) out_valid <= 1;
-    else out_valid <= 0;
-  end
-  assign valid = in_valid;
-`endif
-  always @(posedge clock) begin
-    if (valid) r <= a_in;
-  end
-  always @(posedge clock) begin
-    if (valid) ctrl <= ctrl_in;
-  end
-  always @(posedge clock) begin
-    if (valid) sub <= sub_in;
-  end
-  always @(posedge clock) begin
-    if (valid) sign <= sign_in;
-  end
-  always @(posedge clock) begin
-    if (valid) l <= sub_in ? ~b_in : b_in;
-  end
-  always @(posedge clock) begin
-    if (valid) is_arch <= is_arch_in;
-  end
-
-  assign branch = is_beq && ZF || is_bne && ~ZF || is_blt && cmp || is_bge && ~cmp;
+   assign branch = is_beq && ZF || is_bne && ~ZF || is_blt && cmp || is_bge && ~cmp;
   assign op_ctrl = is_xor || is_or || is_and ? LOGIC : 
                      is_sll || is_srl || is_sra ? SHIFT :
                      is_beq || is_bne || is_blt || is_bge || is_slti || is_sltiu ? CMP : ADDER;
@@ -177,26 +125,26 @@ module ysyx_20020207_ALU (
   wire [31:0] adder_result;
   assign results[ADDER] = adder_result;
   Adder_32bit Adder (
-      .a(l),
-      .b(r),
+      .a(a),
+      .b(b),
       .cin(sub),
       .result(adder_result),
       .cout(CF)
   );
   Shift_32bit Shift (
-      .a(r),
-      .shift_num(l[4:0]),
+      .a(a),
+      .shift_num(b[4:0]),
       .shift_ctrl(shift_ctrl),
       .shift_result(results[SHIFT])
   );
   Logic_32bit Logic (
-      .a(r),
-      .b(l),
+      .a(a),
+      .b(b),
       .logic_ctrl(logic_ctrl),
       .logic_result(results[LOGIC])
   );
   assign ZF = ~(|adder_result);
-  assign OF = l[31] == r[31] && l[31] != adder_result[31];
+  assign OF = a[31] == b[31] && a[31] != adder_result[31];
   wire high = adder_result[31];
   wire cmp = sign ? OF ^ high : ~CF;
   /*wire cmp, high;

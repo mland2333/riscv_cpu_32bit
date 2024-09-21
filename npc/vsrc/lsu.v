@@ -8,7 +8,13 @@ module ysyx_20020207_LSU (
     input  out_ready,
     output reg in_ready,
     input jump,
+    input need_lsu,
+    output lsu_reg_out,
 `endif
+    input reg_wen_in,
+    output reg_wen_out,
+    input [4:0] reg_addr_in,
+    output [4:0] reg_addr_out,
     input [31:0] addr,
     input [31:0] wdata_in,
     input ren_in,
@@ -51,11 +57,13 @@ module ysyx_20020207_LSU (
     //input  [3:0] io_master_rid,
 );
   reg [31:0] waddr, raddr, wdata;
+  reg lsu_reg;
   reg wen, ren;
   reg [3:0] wmask;
   reg [2:0] load_ctrl;
   wire valid;
- 
+  reg reg_wen;
+  reg[4:0] reg_addr;
 `ifdef CONFIG_PIPELINE
   always@(posedge clock)begin
     if(reset || jump) out_valid <= 0;
@@ -66,7 +74,7 @@ module ysyx_20020207_LSU (
   always @(posedge clock) begin
     if (reset || jump) in_ready <= 1;
     else if (in_valid && in_ready) in_ready <= 0;
-    else if (!in_ready && out_valid && out_ready) in_ready <= 1;
+    else if (!in_ready && out_valid) in_ready <= 1;
   end
   assign valid = in_valid & in_ready;
 `else
@@ -77,7 +85,16 @@ module ysyx_20020207_LSU (
     else if(out_valid) out_valid <= 0;
   end
 `endif
-
+  always@(posedge clock)begin
+    if(valid) lsu_reg <= 1;
+    else if(out_valid) lsu_reg <= 0;
+  end
+  always @(posedge clock) begin
+    if (valid) reg_addr <= reg_addr_in;
+  end
+  always @(posedge clock) begin
+    if (valid) reg_wen <= reg_wen_in;
+  end
   always @(posedge clock) begin
     if (valid) waddr <= addr;
   end
@@ -101,7 +118,9 @@ module ysyx_20020207_LSU (
   always @(posedge clock) begin
     if (valid) load_ctrl <= load_ctrl_in;
   end
-
+  assign reg_addr_out = reg_addr;
+  assign reg_wen_out = reg_wen;
+  assign lsu_reg_out = lsu_reg;
   localparam IDLE = 2'b00;
   localparam TRAN1 = 2'b01;
   localparam TRAN2 = 2'b10;

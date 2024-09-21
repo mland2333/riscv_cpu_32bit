@@ -6,7 +6,6 @@ module ysyx_20020207_PC #(
     output reg out_valid,
 `ifdef CONFIG_PIPELINE
     input out_ready,
-    output refresh,
 `else
     input wen,
 `endif

@@ -3,6 +3,9 @@ module ysyx_20020207_ARBITER(
   //读通道1
   input arvalid1, rready1,
   input [31:0] araddr1,
+  input [7:0] arlen1,
+  input [2:0] arsize1,
+  input [1:0] arburst1,
   output reg arready1, rvalid1,
   output reg[1:0] rresp1,
   output reg[31:0] rdata1,
@@ -17,6 +20,9 @@ module ysyx_20020207_ARBITER(
   //读通道2
   input arvalid2, rready2,
   input [31:0] araddr2,
+  input [7:0] arlen2,
+  input [2:0] arsize2,
+  input [1:0] arburst2,
   output reg arready2, rvalid2,
   output reg[1:0] rresp2,
   output reg[31:0] rdata2,
@@ -31,6 +37,9 @@ module ysyx_20020207_ARBITER(
   input arready, rvalid, awready, wready, bvalid, rlast,
   input [1:0] rresp, bresp,
   input [31:0] rdata,
+  output reg [2:0] arsize,
+  output reg [7:0] arlen,
+  output reg [1:0] arburst,
   output reg arvalid, rready, awvalid, wvalid, bready, 
   output reg[31:0] araddr, awaddr, 
   output reg[31:0] wdata,
@@ -99,17 +108,23 @@ always@(*)begin
     MEM1_READ:begin
       arvalid = arvalid1;
       rready = rready1;
-      
+      arlen = arlen1;
+      arsize = arsize1;
+      arburst = arburst1;
     end
     MEM2_READ:begin
       arvalid = arvalid2;
       rready = rready2;
-      
+      arlen = arlen2;
+      arsize = arsize2;
+      arburst = arburst2;
     end
     default:begin
       arvalid = 0;
       rready = 0;
-
+      arlen = 0;
+      arsize = 0;
+      arburst = 0;
     end
   endcase
 end

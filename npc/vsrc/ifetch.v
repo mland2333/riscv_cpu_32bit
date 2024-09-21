@@ -38,20 +38,24 @@ module ysyx_20020207_IFU (
   reg refresh;
   always @(posedge clock) begin
     if (reset) refresh <= 0;
-    else if (jump) refresh <= 1;
+    else if (jump && !inst_valid && !in_ready) refresh <= 1;
     else if (inst_valid) refresh <= 0;
   end
   always @(posedge clock) begin
-    if (reset) in_ready <= 1;
+    if (reset || jump) out_valid <= 0;
+    else if (out_valid && out_ready) out_valid <= 0;
+    else if (!refresh && inst_valid) out_valid <= 1;
+  end
+  always @(posedge clock) begin
+    if (reset || jump && !inst_valid && !in_ready) in_ready <= 1;
     else if (in_valid && in_ready) in_ready <= 0;
-    else if (!in_ready && inst_valid && out_ready) in_ready <= 1;
+    else if (refresh && inst_valid || !in_ready && out_valid && out_ready) in_ready <= 1;
   end
 
   always @(posedge clock) begin
     if (reset) pc <= 0;
     else if (in_valid && in_ready) pc <= pc_in;
   end
-  assign out_valid = !refresh && inst_valid;
   wire inst_require = in_valid && in_ready;
 `else
 
