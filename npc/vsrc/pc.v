@@ -20,8 +20,8 @@ module ysyx_20020207_PC #(
   end
 `ifdef CONFIG_PIPELINE
   always @(posedge clock) begin
-    if (reset | out_valid && out_ready | jump) out_valid <= 0;
-    else if (!out_valid | after_rst) out_valid <= 1;
+    if (reset) out_valid <= 0;
+    else if (after_rst) out_valid <= 1;
   end
   always @(posedge clock) begin
     if (reset) begin

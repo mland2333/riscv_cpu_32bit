@@ -41,22 +41,40 @@ module ysyx_20020207_IFU (
     else if (jump && !inst_valid && !in_ready) refresh <= 1;
     else if (inst_valid) refresh <= 0;
   end
-  always @(posedge clock) begin
-    if (reset || jump) out_valid <= 0;
+  always@(posedge clock)begin
+    if(reset || jump && in_ready) in_ready <= 1;
+    else if(jump && inst_valid) in_ready <= 1;
+    else if(in_valid && in_ready) in_ready <= 0;
+    else if(out_valid && out_ready) in_ready <= 1;
+    else if(!in_ready && inst_valid && out_ready) in_ready <= 1;
+  end
+  always@(posedge clock)begin
+    if(reset || jump && in_ready || refresh && inst_valid) out_valid <= 0;
+    else if(jump && inst_valid) out_valid <= 0;
+    else if(out_valid && out_ready) out_valid <= 0;
+    else if(!in_ready && inst_valid) out_valid <= 1;
+  end
+
+  /*always @(posedge clock) begin
+    if (reset || jump || refresh) out_valid <= 0;
     else if (out_valid && out_ready) out_valid <= 0;
     else if (!refresh && inst_valid) out_valid <= 1;
   end
   always @(posedge clock) begin
-    if (reset || jump && !inst_valid && !in_ready) in_ready <= 1;
-    else if (in_valid && in_ready) in_ready <= 0;
+    if (reset || jump && (inst_valid || in_ready)) in_ready <= 1;
+    else if (refresh && !inst_valid || in_valid && in_ready) in_ready <= 0;
     else if (refresh && inst_valid || !in_ready && out_valid && out_ready) in_ready <= 1;
   end
-
+*/
   always @(posedge clock) begin
     if (reset) pc <= 0;
-    else if (in_valid && in_ready) pc <= pc_in;
+    else if (in_valid && in_ready && !jump) pc <= pc_in;
   end
-  wire inst_require = in_valid && in_ready;
+  reg inst_require;
+  always@(posedge clock)begin
+    if(reset) inst_require <= 0;
+    else inst_require <= in_valid && in_ready && !jump;
+  end
 `else
 
   always @(posedge clock) begin
@@ -118,8 +136,8 @@ end
   ICACHE icache (
       .reset(reset),
       .clock(clock),
-      .require(inst_require),
-      .pc(pc_in),
+      .inst_require(inst_require),
+      .pc(pc),
       .fencei(fencei),
 `ifdef CONFIG_PIPELINE
       .out_ready(out_ready),

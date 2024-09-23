@@ -23,10 +23,20 @@ module ysyx_20020207_IDU (
   reg [31:0] inst;
   reg [31:0] pc;
 `ifdef CONFIG_PIPELINE
-  always @(posedge clock) begin
-    if (reset || jump) in_ready <= 1;
+always@(posedge clock)begin
+  if(reset || out_ready || jump) in_ready <= 1;
+  else if(in_valid && in_ready) in_ready <= 0;
+end
+
+always@(posedge clock)begin
+  if(reset || jump) out_valid <= 0;
+  else if(in_valid && (out_ready || in_ready)) out_valid <= 1;
+  else if(out_valid && (in_ready || !in_ready && out_ready)) out_valid <= 0;
+end
+
+ /* always @(posedge clock) begin
+    if (reset || jump || out_ready) in_ready <= 1;
     else if (in_valid && in_ready) in_ready <= 0;
-    else if (!in_ready && out_valid && out_ready) in_ready <= 1;
   end
 
   always @(posedge clock) begin
@@ -34,13 +44,13 @@ module ysyx_20020207_IDU (
     else if (in_valid && in_ready) out_valid <= 1;
     else if (out_valid && out_ready) out_valid <= 0;
   end
-
+*/
+ wire valid = in_valid && in_ready && !jump;
   always @(posedge clock) begin
-    if (reset) inst <= 0;
-    else if (in_valid && in_ready) inst <= inst_in;
+    if (valid) inst <= inst_in;
   end
   always @(posedge clock) begin
-    if (in_valid && in_ready) pc <= pc_in;
+    if (valid) pc <= pc_in;
   end
 `else
   always @(posedge clock) begin

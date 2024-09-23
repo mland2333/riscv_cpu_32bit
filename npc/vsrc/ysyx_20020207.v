@@ -204,8 +204,8 @@ module ysyx_20020207 #(
   );
   wire is_raw;
   ysyx_20020207_RAW mraw (
-      .idu_ready(idu_ready),
-      .exu_ready(exu_ready),
+      .idu_valid(idu_valid),
+      .exu_valid(exu_valid),
       .lsu_ready(lsu_ready),
       .op(inst[6:0]),
       .rs1(inst[19:15]),
@@ -224,7 +224,7 @@ module ysyx_20020207 #(
   wire [DATA_WIDTH-1 : 0] src1, src2;
   ysyx_20020207_RegisterFile #(4, DATA_WIDTH) mreg (
       .clock(clock),
-      .in_valid(reg_wdata_valid),
+      .in_valid(data_ready),
       .rdata1(src1),
       .raddr1(rs1[3:0]),
       .rdata2(src2),
@@ -270,7 +270,7 @@ module ysyx_20020207 #(
   ysyx_20020207_EXU #(DATA_WIDTH) mexu (
       .clock(clock),
       .reset(reset),
-      .in_valid(idu_valid && !is_raw),
+      .in_valid(idu_valid),
       .out_valid(exu_valid),
 `ifdef CONFIG_PIPELINE
       .jump(jump),
@@ -281,7 +281,7 @@ module ysyx_20020207 #(
       .func_in(func),
       .a_in(exu_a),
       .b_in(exu_b),
-      .sub(exu_sub),
+      .sub_in(exu_sub),
       .src1_in(src1),
       .rd_in(idu_rd),
       .rd_out(exu_rd),
@@ -301,7 +301,9 @@ module ysyx_20020207 #(
       .load_ctrl(load_ctrl),
       .need_lsu(need_lsu),
       .fencei(fencei),
-      .result(exu_result)
+      .result(exu_result),
+      .mem_wdata_in(src2),
+      .mem_wdata_out(mem_wdata)
   );
 
   reg [31:0] mem_rdata, mem_wdata;
@@ -312,7 +314,6 @@ module ysyx_20020207 #(
   wire [3:0] lsu_wstrb;
   wire [1:0] lsu_rresp, lsu_bresp, rresp, bresp;
   wire lsu_reg;
-  assign mem_wdata = src2;
   ysyx_20020207_LSU mlsu (
       .clock(clock),
       .reset(reset),

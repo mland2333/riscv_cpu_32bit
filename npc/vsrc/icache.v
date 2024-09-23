@@ -10,7 +10,7 @@ module ICACHE #(
 ) (
     input reset,
     input clock,
-    input require,
+    input inst_require,
     input [31:0] pc,
     input fencei,
     output reg inst_valid,
@@ -49,17 +49,11 @@ module ICACHE #(
   `define ICACHE_TAG VALID - 1 : 32*ICACHE_SIZE
 
   assign rready = 1;
-  wire [TAG_SIZE-1 : 0] tag = _pc[`TAG];
-  wire [INDEX_SIZE - 1 : 0] index = _pc[`INDEX];
+  wire [TAG_SIZE-1 : 0] tag = pc[`TAG];
+  wire [INDEX_SIZE - 1 : 0] index = pc[`INDEX];
 
   reg [ICACHE_LINE - 1:0] icache[ICACHE_NUMS];
-  reg refresh;
-  reg inst_require;
-  always @(posedge clock) begin
-    inst_require <= require;
-  end
-
-
+  
   integer i;
 
   //`ifdef CONFIG_BURST
@@ -79,16 +73,11 @@ module ICACHE #(
   end
 
   wire [OFFEST_SIZE + 1 : 0] zero = 0;
-  assign araddr = {_pc[31:OFFEST_SIZE+2], zero};
+  assign araddr = {pc[31:OFFEST_SIZE+2], zero};
 
   reg [2:0] state;
-  wire [OFFEST_SIZE-1 : 0] offest = _pc[`OFFEST];
+  wire [OFFEST_SIZE-1 : 0] offest = pc[`OFFEST];
   wire need_read = ~(icache[index][VALID] && icache[index][`ICACHE_TAG] == tag);
-
-  reg [31:0] _pc;
-  always @(posedge clock) begin
-    if (require) _pc <= pc;
-  end
 
   reg [7:0] burst_nums;
   reg trans_ready;
@@ -117,7 +106,7 @@ module ICACHE #(
   end
 
 
-  assign inst = insts[offest];
+  assign inst = need_read ? 0 : insts[offest];
   /*always@(posedge clock)begin
   if(reset)begin
     //cache_init();
@@ -139,9 +128,9 @@ end
   always @(posedge clock) begin
     if (reset) inst_valid <= 0;
     else begin
-      if (inst_require && !need_read) inst_valid <= 1;
+      if (inst_valid && out_ready) inst_valid <= 0;
+      else if (inst_require && !need_read) inst_valid <= 1;
       else if (burst_nums == ICACHE_SIZE) inst_valid <= 1;
-      else if (inst_valid && out_ready) inst_valid <= 0;
     end
   end
 `else

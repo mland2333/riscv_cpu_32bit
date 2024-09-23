@@ -6,7 +6,7 @@ module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     input [31:0] a_in,
     input [31:0] b_in,
     input [DATA_WIDTH-1:0]imm_in, src1_in,
-    input sub,
+    input sub_in,
     input in_valid,
     output reg out_valid,
   `ifdef CONFIG_PIPELINE
@@ -28,26 +28,28 @@ module ysyx_20020207_EXU#(DATA_WIDTH = 32)(
     output [2:0] load_ctrl,
     output fencei,
     output need_lsu,
-    output [31:0] result
+    output [31:0] result,
+    output [31:0] mem_wdata_in,
+    output [31:0] mem_wdata_out
 );
 reg[6:0] op;
 reg[2:0] func;
-reg[31:0] imm, pc, src1, src2, csr_rdata;
+reg[31:0] imm, pc, src1, mem_wdata, csr_rdata;
 reg[4:0] rd;
 reg [31:0] a, b;
+reg sub;
 `ifdef CONFIG_PIPELINE
 always@(posedge clock)begin
-  if(reset || jump || out_ready) in_ready <= 1;
+  if(reset || out_ready || jump) in_ready <= 1;
   else if(in_valid && in_ready) in_ready <= 0;
-  else if(!in_ready && out_valid && out_ready) in_ready <= 1;
 end
 
 always@(posedge clock)begin
   if(reset || jump) out_valid <= 0;
-  else if(in_valid && in_ready) out_valid <= 1;
-  else if(out_valid && out_ready) out_valid <= 0;
+  else if(in_valid && (out_ready || in_ready)) out_valid <= 1;
+  else if(out_valid && (in_ready || !in_ready && out_ready)) out_valid <= 0;
 end
-wire valid = in_valid && in_ready;
+wire valid = in_valid && in_ready && !jump;
 always@(posedge clock)begin
   if(valid) op <= op_in;
 end
@@ -72,11 +74,17 @@ end
 always@(posedge clock)begin
   if(valid) b <= b_in;
 end
+always@(posedge clock)begin
+  if(valid) mem_wdata <= mem_wdata_in;
+end
+always@(posedge clock)begin
+  if(valid) sub <= sub_in;
+end
 `else
 
 always@(posedge clock)begin
   if(reset)begin
-    {op, func, imm, pc, src1, src2, csr_rdata} <= 0;
+    {op, func, sub, imm, pc, src1, csr_rdata, mem_wdata} <= 0;
   end
   else begin
     if(in_valid)begin
@@ -85,8 +93,10 @@ always@(posedge clock)begin
       imm <= imm_in;
       pc <= pc_in;
       src1 <= src1_in;
+      mem_wdata <= mem_wdata_in;
       out_valid <= 1;
       rd <= rd_in;
+      sub <= sub_in;
     end
     else if(out_valid)
       out_valid <= 0;
@@ -159,6 +169,7 @@ end
     assign pc_out = pc;
     assign imm_out = imm[11:0];
     assign rd_out = rd;
+    assign mem_wdata_out = mem_wdata;
     wire ZF, OF, CF;
     ysyx_20020207_ALU malu(
       .is_arch(is_arch),

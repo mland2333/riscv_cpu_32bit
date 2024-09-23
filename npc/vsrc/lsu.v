@@ -28,7 +28,8 @@ module ysyx_20020207_LSU (
     /*output [3:0] io_master_awid,
   output [7:0] io_master_awlen,
   output [2:0] io_master_awsize,
-  output [1:0] io_master_awbureset,*/
+  oulsu_reg <= 0;
+endtput [1:0] io_master_awbureset,*/
 
     input io_master_wready,
     output io_master_wvalid,
@@ -66,17 +67,17 @@ module ysyx_20020207_LSU (
   reg[4:0] reg_addr;
 `ifdef CONFIG_PIPELINE
   always@(posedge clock)begin
-    if(reset || jump) out_valid <= 0;
+    if(reset) out_valid <= 0;
     if(lsu_finish && !out_valid) out_valid <= 1;
     else if(out_valid) out_valid <= 0;
   end
 
   always @(posedge clock) begin
-    if (reset || jump) in_ready <= 1;
+    if (reset || jump && in_ready) in_ready <= 1;
     else if (in_valid && in_ready) in_ready <= 0;
     else if (!in_ready && out_valid) in_ready <= 1;
   end
-  assign valid = in_valid & in_ready;
+  assign valid = in_valid & in_ready & !jump;
 `else
   assign valid = in_valid;
   always@(posedge clock)begin

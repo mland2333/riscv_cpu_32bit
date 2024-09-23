@@ -1,6 +1,6 @@
 module ysyx_20020207_RAW (
-    input idu_ready,
-    input exu_ready,
+    input idu_valid,
+    input exu_valid,
     input lsu_ready,
     input [4:0] rs1,
     input [4:0] rs2,
@@ -24,12 +24,12 @@ module ysyx_20020207_RAW (
   wire is_b = op == 7'b1100011;
   wire is_s = op == 7'b0100011;
 
-  wire idu_conflict = !(idu_ready && exu_ready && lsu_ready) && idu_reg_wen == 1 && (!is_jalr && !is_auipc && !is_lui && rs1 == idu_rd || (is_b || is_s || is_r) && rs2 == idu_rd);
+  wire idu_conflict = idu_valid && idu_reg_wen == 1 && (!is_jalr && !is_auipc && !is_lui && rs1 == idu_rd || (is_b || is_s || is_r) && rs2 == idu_rd);
 
-  wire exu_conflict = !(exu_ready && lsu_ready) && exu_rd != 0 && exu_reg_wen == 1 && (!is_jalr && !is_auipc && !is_lui && rs1 == exu_rd || (is_b || is_s || is_r) && rs2 == exu_rd);
+  wire exu_conflict = exu_valid && exu_rd != 0 && exu_reg_wen == 1 && (!is_jalr && !is_auipc && !is_lui && rs1 == exu_rd || (is_b || is_s || is_r) && rs2 == exu_rd);
 
   wire lsu_conflict = !(lsu_ready) && lsu_rd != 0 && lsu_reg_wen == 1 && (!is_jalr && !is_auipc && !is_lui && rs1 == lsu_rd || (is_b || is_s || is_r) && rs2 == lsu_rd);
 
-assign is_raw = exu_conflict || lsu_conflict;
+assign is_raw = idu_conflict || exu_conflict || lsu_conflict;
 
 endmodule
