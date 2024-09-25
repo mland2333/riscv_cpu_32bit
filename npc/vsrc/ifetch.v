@@ -11,6 +11,8 @@ module ysyx_20020207_IFU (
     input out_ready,
     output reg in_ready,
     input jump,
+    input exu_ready,
+    input lsu_ready,
 `endif
     input io_master_arready,
     output io_master_arvalid,
@@ -45,13 +47,13 @@ module ysyx_20020207_IFU (
     if(reset || jump && in_ready) in_ready <= 1;
     else if(jump && inst_valid) in_ready <= 1;
     else if(in_valid && in_ready) in_ready <= 0;
-    else if(out_valid && out_ready) in_ready <= 1;
-    else if(!in_ready && inst_valid && out_ready) in_ready <= 1;
+    else if(out_valid && (out_ready || exu_ready || lsu_ready)) in_ready <= 1;
+    else if(!in_ready && inst_valid && (out_ready || exu_ready || lsu_ready)) in_ready <= 1;
   end
   always@(posedge clock)begin
     if(reset || jump && in_ready || refresh && inst_valid) out_valid <= 0;
     else if(jump && inst_valid) out_valid <= 0;
-    else if(out_valid && out_ready) out_valid <= 0;
+    else if(out_valid && (out_ready || exu_ready || lsu_ready)) out_valid <= 0;
     else if(!in_ready && inst_valid) out_valid <= 1;
   end
 
@@ -66,14 +68,16 @@ module ysyx_20020207_IFU (
     else if (refresh && inst_valid || !in_ready && out_valid && out_ready) in_ready <= 1;
   end
 */
+  //wire valid = (in_valid && in_ready || in_valid && !in_ready && out_valid && (out_ready || exu_ready || lsu_ready)) && !jump;
+  wire valid = in_valid && in_ready && !jump;
   always @(posedge clock) begin
     if (reset) pc <= 0;
-    else if (in_valid && in_ready && !jump) pc <= pc_in;
+    else if (valid) pc <= pc_in;
   end
   reg inst_require;
   always@(posedge clock)begin
     if(reset) inst_require <= 0;
-    else inst_require <= in_valid && in_ready && !jump;
+    else inst_require <= valid;
   end
 `else
 
@@ -140,7 +144,7 @@ end
       .pc(pc),
       .fencei(fencei),
 `ifdef CONFIG_PIPELINE
-      .out_ready(out_ready),
+      .out_ready(out_ready || exu_ready || lsu_ready),
 `endif
       .inst_valid(inst_valid),
       .inst(inst),

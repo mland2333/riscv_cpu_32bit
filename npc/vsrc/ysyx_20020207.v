@@ -73,12 +73,7 @@ module ysyx_20020207 #(
   //import "DPI-C" function void exu_finish_cal();
   wire [DATA_WIDTH-1 : 0] inst;
   reg [DATA_WIDTH-1 : 0] pc, ifu_pc, idu_pc;
-  reg is_diff_skip;
-  wire diff_skip;
-
-  always @(posedge clock) begin
-    is_diff_skip <= diff_skip;
-  end
+  
   //`ifdef CONFIG_YSYXSOC
   assign io_master_awid = 'b0,
       io_master_awlen = 'b0,
@@ -113,18 +108,19 @@ module ysyx_20020207 #(
       .jump(jump),
       .pc(pc)
   );
+  reg is_diff_skip;
+  wire diff_skip;
+  always @(posedge clock) begin
+    if(lsu_valid)
+      is_diff_skip <= diff_skip;
+    else is_diff_skip <= 0;
+  end
+
   reg diff;
   wire data_ready = (exu_valid && !need_lsu && lsu_ready) || lsu_valid;
   always @(posedge clock) begin
     if (data_ready) diff <= 1;
     else diff <= 0;
-  end
-
-  reg is_ifu;
-  always @(posedge clock) begin
-    if (reset) is_ifu <= 0;
-    else if (pc_valid) is_ifu <= 1;
-    else if (ifu_valid) is_ifu <= 0;
   end
 
   wire ifu_arready, ifu_arvalid, ifu_rready;
@@ -151,6 +147,8 @@ module ysyx_20020207 #(
       .jump(jump),
       .in_ready(ifu_ready),
       .out_ready(idu_ready && !is_raw),
+      .exu_ready(exu_ready && !is_raw),
+      .lsu_ready(lsu_ready && !is_raw),
 `endif
       .inst(inst),
       .io_master_rvalid(ifu_rvalid),
@@ -190,6 +188,7 @@ module ysyx_20020207 #(
       .jump(jump),
       .in_ready(idu_ready),
       .out_ready(exu_ready),
+      .lsu_ready(lsu_ready),
 `endif
       .inst_in(inst),
       .pc_in(ifu_pc),
@@ -337,6 +336,7 @@ module ysyx_20020207 #(
       .wmask_in(wmask),
       .rdata(mem_rdata),
       .load_ctrl_in(load_ctrl),
+      .diff_skip(diff_skip),
       .io_master_rvalid(lsu_rvalid),
       .io_master_arready(lsu_arready),
       .io_master_awready(lsu_awready),
@@ -508,7 +508,7 @@ module ysyx_20020207 #(
       .rvalid2  (clint_rvalid),
       .rresp2   (clint_rresp),
       .rdata2   (clint_rdata),
-      .high     (clint_high),
+      .high     (clint_high)
       /*
     `ifndef CONFIG_YSYXSOC
       .arvalid3 (uart_arvalid),
@@ -527,10 +527,9 @@ module ysyx_20020207 #(
       .awready3 (uart_awready),
       .wready3  (uart_wready),
       .bvalid3  (uart_bvalid),
-      .bresp3   (uart_bresp),
+      .bresp3   (uart_bresp)
 `endif
 */
-      .diff_skip(diff_skip)
   );
 
   /*`ifndef CONFIG_YSYXSOC

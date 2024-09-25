@@ -23,7 +23,7 @@ module ysyx_20020207_XBAR(
   input [31:0] rdata2,
   output reg arvalid2, rready2, 
   output reg [31:0] araddr2, 
-  output high,
+  output high
 /*`ifndef CONFIG_YSYXSOC
   //uart
   input arready3, rvalid3, awready3, wready3, bvalid3,
@@ -35,7 +35,6 @@ module ysyx_20020207_XBAR(
   output reg [3:0] wstrb3,
 `endif
 */
-  output diff_skip
 );
 
 `define DEVICE_BASE 32'ha0000000
@@ -74,27 +73,10 @@ localparam FLASH_ZONE = 3'b101;
 localparam SDRAM_ZONE = 3'b110;
 localparam GPIO_ZONE = 3'b111;
 
-reg[2:0] read_zone;
-reg[2:0] write_zone;
-
 wire is_read_uart = araddr[31:12] == 20'h10000;
 wire is_read_rtc = araddr[31:16] == 16'h2000;
 assign high = araddr == `RTC_ADDR_HIGH;
-wire is_read_flash = araddr[31:28] == 4'h3;
-wire is_read_sram = araddr[31:24] == 8'h0f;
-wire is_read_psram = araddr[31:28] == 4'h8 || araddr[31:28] == 4'h9;
-wire is_read_sdram = araddr[31:28] == 4'ha || araddr[31:28] == 4'hb;
-wire is_read_gpio = araddr[31:4] == 28'h1000200;
-wire read_diff_skip = is_read_uart || is_read_rtc || is_read_gpio;
 
-wire is_write_uart = awaddr[31:12] == 20'h10000;
-wire is_write_sram = awaddr[31:24] == 8'h0f;
-wire is_write_psram = awaddr[31:28] == 4'h8 || awaddr[31:28] == 4'h9;
-wire is_write_sdram = awaddr[31:28] == 4'ha || awaddr[31:28] == 4'hb;
-wire is_write_gpio = awaddr[31:4] == 28'h1000200;
-wire write_diff_skip = is_write_uart || is_write_gpio;
-
-assign diff_skip = read_diff_skip | write_diff_skip;
 assign rvalid = is_read_rtc ? rvalid2 : rvalid1;
 always@(*)begin
   arvalid1 = 0;

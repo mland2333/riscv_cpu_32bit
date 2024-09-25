@@ -21,6 +21,7 @@ module ysyx_20020207_LSU (
     input wen_in,
     input [3:0] wmask_in,
     input [2:0] load_ctrl_in,
+    output diff_skip,
     output reg [31:0] rdata,
     input io_master_awready,
     output io_master_awvalid,
@@ -126,6 +127,17 @@ endtput [1:0] io_master_awbureset,*/
   localparam TRAN1 = 2'b01;
   localparam TRAN2 = 2'b10;
   localparam MID = 2'b11;
+
+wire is_read_uart = raddr[31:12] == 20'h10000;
+wire is_read_rtc = raddr[31:16] == 16'h2000;
+wire is_read_gpio = raddr[31:4] == 28'h1000200;
+wire read_diff_skip = is_read_uart || is_read_rtc || is_read_gpio;
+
+wire is_write_uart = waddr[31:12] == 20'h10000;
+wire is_write_gpio = waddr[31:4] == 28'h1000200;
+wire write_diff_skip = is_write_uart || is_write_gpio;
+
+assign diff_skip = read_diff_skip || write_diff_skip;
 
   reg arvalid, rready, awvalid, wvalid, bready;
   reg [3:0] _wstrb;

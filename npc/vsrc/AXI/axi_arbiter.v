@@ -48,7 +48,7 @@ module ysyx_20020207_ARBITER(
 localparam IDLE_READ = 2'b00;
 localparam MEM1_READ = 2'b01;
 localparam MEM2_READ = 2'b10;
-
+localparam WAIT = 2'b11;
 localparam IDLE_WRITE = 2'b00;
 localparam MEM1_WRITE = 2'b01;
 localparam MEM2_WRITE = 2'b10;
@@ -77,11 +77,13 @@ always@(posedge clk)begin
       MEM1_READ:begin
         if(rlast1)begin
           read_state <= IDLE_READ;
+          read_state <= WAIT;
         end
       end
       MEM2_READ:begin
         if(rvalid && rready)begin
           read_state <= IDLE_READ;
+          read_state <= WAIT;
         end
       end
     /*`else

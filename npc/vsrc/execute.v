@@ -40,16 +40,16 @@ reg [31:0] a, b;
 reg sub;
 `ifdef CONFIG_PIPELINE
 always@(posedge clock)begin
-  if(reset || out_ready || jump) in_ready <= 1;
+  if(reset || jump && out_ready || out_ready && !(in_valid && out_valid)) in_ready <= 1;
   else if(in_valid && in_ready) in_ready <= 0;
 end
 
 always@(posedge clock)begin
-  if(reset || jump) out_valid <= 0;
+  if(reset || jump && out_ready) out_valid <= 0;
   else if(in_valid && (out_ready || in_ready)) out_valid <= 1;
-  else if(out_valid && (in_ready || !in_ready && out_ready)) out_valid <= 0;
+  else if(out_valid && (in_ready || out_ready)) out_valid <= 0;
 end
-wire valid = in_valid && in_ready && !jump;
+wire valid = in_valid && (in_ready || out_ready) && !jump;
 always@(posedge clock)begin
   if(valid) op <= op_in;
 end

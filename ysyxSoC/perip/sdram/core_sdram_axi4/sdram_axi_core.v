@@ -70,7 +70,7 @@ module sdram_axi_core (
   parameter SDRAM_MHZ = 50;
   parameter SDRAM_ADDR_W = 24;
   parameter SDRAM_COL_W = 9;
-  parameter SDRAM_READ_LATENCY = 2;
+  parameter SDRAM_READ_LATENCY = 0;
 
   //-----------------------------------------------------------------
   // Defines / Local params
@@ -263,13 +263,13 @@ module sdram_axi_core (
       //-----------------------------------------
       // STATE_WRITE0
       //-----------------------------------------
-      /*STATE_WRITE0: begin
+      STATE_WRITE0: begin
         next_state_r = STATE_WRITE1;
-      end */ 
+      end 
       //-----------------------------------------
       // STATE_WRITE1
       //-----------------------------------------
-      STATE_WRITE0: begin
+      STATE_WRITE1: begin
         next_state_r = STATE_IDLE;
 
         // Another pending write request (with no refresh pending)
@@ -601,7 +601,7 @@ else if (rd_q[SDRAM_READ_LATENCY+1])
   always @(posedge clk_i or posedge rst_i)
     if (rst_i) ack_q <= 1'b0;
     else begin
-      if (state_q == STATE_WRITE0) ack_q <= 1'b1;
+      if (state_q == STATE_WRITE1 && ack_q == 0) ack_q <= 1'b1;
       else if (rd_q[SDRAM_READ_LATENCY+1]) ack_q <= 1'b1;
       else ack_q <= 1'b0;
     end
